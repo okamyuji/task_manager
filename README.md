@@ -47,6 +47,7 @@ task_manager/
 
 - **Flutter**: 3.24.0+
 - **Dart**: 3.5.0+
+- **対応プラットフォーム**: iOS 12.0+, Android 5.0+ (API 21+), Web, macOS 10.14+
 - **状態管理**: Riverpod 3.0.3
 - **HTTP通信**: Dio 5.9.0 + Retrofit 4.7.3
 - **ローカルDB**: Hive 2.2.3
@@ -183,18 +184,254 @@ class AppConstants {
 
 ### 3. Flutter アプリ起動
 
+#### 共通手順（iOS/Android共通）
+
 ```bash
 # 依存関係インストール
 flutter pub get
 
 # コード生成
 flutter pub run build_runner build --delete-conflicting-outputs
-
-# アプリ起動
-flutter run
 ```
 
-### 4. ユーザー登録とログイン
+#### iOS/iOSシミュレーターで起動
+
+```bash
+# iOSシミュレーター一覧確認
+xcrun simctl list devices available
+
+# アプリ起動（デフォルトデバイス）
+flutter run
+
+# 特定のシミュレーター指定
+flutter run -d "iPhone 15 Pro"
+```
+
+**注意**: API接続は自動的に`http://192.168.0.16:8080`に設定されます。
+
+#### Androidエミュレーターで起動
+
+```bash
+# エミュレーター起動（Android Studio経由推奨）
+# または: emulator -avd <AVD名>
+
+# アプリ起動（デフォルトエミュレーター）
+flutter run
+
+# 特定のエミュレーター指定
+flutter run -d <device-id>
+```
+
+**注意**: API接続は自動的に`http://10.0.2.2:8080`に設定されます（エミュレーターからホストマシンのlocalhostにアクセス）。
+
+#### Android実機で起動
+
+```bash
+# USB接続してデバッグモードを有効化
+
+# 実機が認識されているか確認
+flutter devices
+
+# 環境変数でAPIホストを指定して起動
+flutter run --dart-define=API_HOST=192.168.0.16
+```
+
+**前提条件:**
+
+- PCとAndroid実機が**同じWi-Fiネットワーク**に接続されている
+- PCのファイアウォールで**ポート8080**が開放されている
+- サーバーが`0.0.0.0:8080`でリッスンしている（`localhost`ではなく）
+
+**ファイアウォール設定（macOS）:**
+
+```bash
+# ポート8080を開放（一時的）
+# システム設定 > ネットワーク > ファイアウォール > オプション
+# で "Go APIサーバー" の着信接続を許可
+
+# または: pfctlで設定
+sudo pfctl -f /etc/pf.conf
+```
+
+#### デバイス確認
+
+```bash
+# 接続中のデバイス一覧
+flutter devices
+
+# 出力例:
+# iPhone 15 Pro (simulator)      • iOS 17.2
+# Pixel 7 (mobile)               • android-arm64
+# macOS (desktop)                • darwin-arm64
+```
+
+#### API接続先の動作確認
+
+アプリのログインエラーが発生する場合、以下で接続をテスト：
+
+```bash
+# Android実機から（PCのターミナルで）
+adb shell
+curl http://192.168.0.16:8080/health
+
+# Androidエミュレーターから
+adb shell
+curl http://10.0.2.2:8080/health
+```
+
+### 4. Android APKビルドとインストール
+
+開発中のアプリをAPKファイルとしてビルドし、実機にインストールする方法です。
+
+#### 基本的なビルドとインストール
+
+```bash
+# 1. リリースAPKをビルド
+flutter build apk --release
+
+# 2. USB接続したAndroidデバイスにインストール
+adb install build/app/outputs/flutter-apk/app-release.apk
+
+# または、ワンライナーで実行
+flutter build apk --release && adb install build/app/outputs/flutter-apk/app-release.apk
+```
+
+#### API_HOSTを指定してビルド（実機用）
+
+実機でAPIサーバーに接続する場合、ビルド時にPCのIPアドレスを指定：
+
+```bash
+# 1. PCのIPアドレスを確認
+ifconfig | grep "inet " | grep -v 127.0.0.1
+# 例: inet 192.168.0.16
+
+# 2. API_HOSTを指定してビルド
+flutter build apk --release --dart-define=API_HOST=192.168.0.16
+
+# 3. インストール（既存アプリを上書き）
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+#### Split APK（サイズ最適化）
+
+ABIごとに分割ビルドすることで、APKサイズを50%削減できます：
+
+```bash
+# ABIごとに分割ビルド
+flutter build apk --split-per-abi --release --dart-define=API_HOST=192.168.0.16
+
+# 生成されるAPK:
+# app-arm64-v8a-release.apk     (約15-20MB、最新端末向け)
+# app-armeabi-v7a-release.apk   (約15-20MB、古い端末向け)
+# app-x86_64-release.apk        (エミュレーター向け)
+
+# デバイスに合ったAPKをインストール（ほとんどの最新端末はarm64-v8a）
+adb install build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+```
+
+#### デバッグAPKのビルド
+
+開発中の動作確認用（ホットリロード不可）：
+
+```bash
+# デバッグAPKをビルド
+flutter build apk --debug
+
+# インストール
+adb install build/app/outputs/flutter-apk/app-debug.apk
+```
+
+#### 複数デバイスが接続されている場合
+
+```bash
+# 接続デバイス一覧確認
+adb devices
+
+# 出力例:
+# List of devices attached
+# emulator-5554       device
+# R58M123ABCD         device
+
+# 特定デバイスを指定してインストール
+adb -s R58M123ABCD install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+#### APKインストール後の動作確認
+
+```bash
+# アプリを起動
+adb shell am start -n com.example.task_manager/.MainActivity
+
+# アプリのログを確認
+adb logcat | grep flutter
+
+# API接続テスト（アプリ内から）
+adb shell
+curl http://192.168.0.16:8080/health
+```
+
+#### トラブルシューティング
+
+**既存アプリとの競合エラー:**
+
+```bash
+# エラー: INSTALL_FAILED_UPDATE_INCOMPATIBLE
+# 解決: 既存アプリを削除してからインストール
+adb uninstall com.example.task_manager
+adb install build/app/outputs/flutter-apk/app-release.apk
+```
+
+**容量不足エラー:**
+
+```bash
+# エラー: INSTALL_FAILED_INSUFFICIENT_STORAGE
+# 解決: デバイスの空き容量を確認
+adb shell df -h
+```
+
+**デバイスが認識されない:**
+
+```bash
+# adbサーバー再起動
+adb kill-server
+adb start-server
+adb devices
+
+# USBデバッグが有効か確認
+# Android端末: 設定 > 開発者向けオプション > USBデバッグ
+```
+
+#### ビルドサイズ比較
+
+| ビルドタイプ | APKサイズ | 用途 |
+|------------|---------|------|
+| `--debug` | 約40-50MB | 開発・デバッグ用 |
+| `--release` | 約20-30MB | 本番・配布用 |
+| `--split-per-abi` | 約15-20MB/ABI | サイズ最適化版 |
+
+#### 実機テスト推奨ワークフロー
+
+```bash
+# 1. Docker Composeでサーバー起動
+docker compose up -d
+
+# 2. PCのIPアドレス確認
+ifconfig | grep "inet " | grep -v 127.0.0.1
+
+# 3. ファイアウォールでポート8080を開放（macOS）
+# システム設定 > ネットワーク > ファイアウォール > オプション
+
+# 4. API_HOSTを指定してビルド
+flutter build apk --release --dart-define=API_HOST=192.168.0.16
+
+# 5. APKをインストール
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+
+# 6. アプリを起動して接続テスト
+adb shell am start -n com.example.task_manager/.MainActivity
+```
+
+### 5. ユーザー登録とログイン
 
 #### 新規ユーザー登録（メール認証あり）
 
@@ -499,35 +736,146 @@ flutter pub get
 
 ### 接続エラー
 
-#### Android エミュレータからの接続
+**注意**: 最新版では`app_constants.dart`がプラットフォーム自動判定するため、基本的に手動変更は不要です。
 
-`app_constants.dart`:
+#### Android エミュレータからの接続エラー
 
-```dart
-static const String apiBaseUrl = 'http://10.0.2.2:8080';
+- 症状: `SocketException: Failed to connect`
+
+    - 解決策1: 自動設定の確認
+
+    デフォルトで`http://10.0.2.2:8080`に自動設定されます。以下で確認：
+
+    ```bash
+    # アプリのログ確認
+    flutter run --verbose | grep apiBaseUrl
+    ```
+
+    - 解決策2: サーバーが起動しているか確認
+
+    ```bash
+    # エミュレーター内から接続テスト
+    adb shell
+    curl http://10.0.2.2:8080/health
+    ```
+
+    エラーが出る場合:
+
+    - Docker Composeでサーバーが起動しているか確認: `docker compose ps`
+    - ローカル実行の場合、`0.0.0.0:8080`でリッスンしているか確認
+
+    - 解決策3: エミュレーターのネットワークリセット
+
+    ```bash
+    # エミュレーター再起動
+    adb reboot
+
+    # または: 完全再起動
+    # Android Studio > AVD Manager > エミュレーター削除 → 再作成
+    ```
+
+#### Android実機からの接続エラー
+
+**症状**: `SocketException: Network is unreachable`
+
+**チェックリスト:**
+
+1. **同じWi-Fiネットワークに接続しているか確認**
+
+    ```bash
+    # PCのIPアドレス確認
+    ifconfig | grep "inet "
+    # 例: inet 192.168.0.16
+    
+    # Android実機のIPアドレス確認
+    # 設定 > ネットワークとインターネット > Wi-Fi > 詳細
+    # 例: 192.168.0.42 → 同じサブネット（192.168.0.x）であること
+    ```
+
+2. **ファイアウォールでポート8080を開放**
+
+    **macOS:**
+
+    ```bash
+    # システム設定 > ネットワーク > ファイアウォール > オプション
+    # "Go APIサーバー" または "Docker" の着信接続を許可
+    
+    # または: 一時的に無効化（テスト用のみ）
+    sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    ```
+
+    **Windows:**
+
+    ```powershell
+    # PowerShellで実行（管理者権限）
+    netsh advfirewall firewall add rule name="Go API" dir=in action=allow protocol=TCP localport=8080
+    ```
+
+3. **サーバーが0.0.0.0でリッスンしているか確認**
+
+    Docker Composeの場合は自動的に`0.0.0.0:8080`でリッスンします。
+
+    ローカル実行の場合、`server/main.go`を確認：
+
+    ```go
+    http.ListenAndServe("0.0.0.0:8080", mux) // ✓ 正しい
+    // http.ListenAndServe("localhost:8080", mux) // ✗ 実機から接続不可
+    ```
+
+4. **実機からAPIホストを指定して起動**
+
+    ```bash
+    # PCのIPアドレスを環境変数で指定
+    flutter run --dart-define=API_HOST=192.168.0.16
+    ```
+
+5. **接続テスト**
+
+    ```bash
+    # Android実機のブラウザで以下にアクセス
+    http://192.168.0.16:8080/health
+    
+    # または: adb経由でテスト
+    adb shell
+    curl http://192.168.0.16:8080/health
+    ```
+
+#### Android特有のHTTPエラー
+
+**症状**: `Cleartext HTTP traffic not permitted`
+
+**原因**: Android 9以降、デフォルトでHTTPSのみ許可されています。
+
+**解決策**: `AndroidManifest.xml`に以下が設定されているか確認（最新版では自動設定済み）：
+
+```xml
+<application
+    android:usesCleartextTraffic="true">
+```
+
+#### Androidパーミッションエラー
+
+**症状**: 画像アップロードやカメラが動作しない
+
+**解決策**: `AndroidManifest.xml`に以下が設定されているか確認（最新版では自動設定済み）：
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 ```
 
 #### iOS Simulatorからの接続
 
-```dart
-static const String apiBaseUrl = 'http://127.0.0.1:8080';
+デフォルトで`http://192.168.0.16:8080`に自動設定されます。
+
+接続できない場合:
+
+```bash
+# シミュレーターからPCのlocalhostにアクセス
+# （PCのローカルIPで接続）
+curl http://192.168.0.16:8080/health
 ```
-
-#### 実機からの接続
-
-1. MacのローカルIPを確認してください
-
-    ```bash
-    ifconfig | grep "inet "
-    ```
-
-2. `app_constants.dart`を更新してください
-
-    ```dart
-    static const String apiBaseUrl = 'http://192.168.x.x:8080';
-    ```
-
-3. ファイアウォール設定を確認してください
 
 ### JWT認証エラー
 

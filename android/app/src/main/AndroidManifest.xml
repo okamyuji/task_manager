@@ -1,8 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- インターネット接続を許可（API通信に必須） -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ネットワーク状態の確認を許可 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- カメラアクセスを許可（画像アップロードに必要） -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- ストレージアクセスを許可（画像選択に必要、Android 12以下） -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+                     android:maxSdkVersion="32" />
+    <!-- 写真選択を許可（Android 13以上） -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <application
         android:label="task_manager"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
