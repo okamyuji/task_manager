@@ -1,22 +1,66 @@
 package main
 
 import (
+	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 )
 
+// FlexibleTime 柔軟な時刻パース用のカスタム型
+type FlexibleTime struct {
+	time.Time
+}
+
+// UnmarshalJSON 複数の日時フォーマットに対応
+func (ft *FlexibleTime) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	if s == "null" || s == "" {
+		ft.Time = time.Time{}
+		return nil
+	}
+
+	// 試行する日時フォーマット
+	formats := []string{
+		time.RFC3339,                 // 2006-01-02T15:04:05Z07:00
+		time.RFC3339Nano,             // 2006-01-02T15:04:05.999999999Z07:00
+		"2006-01-02T15:04:05.999999", // マイクロ秒（タイムゾーンなし）
+		"2006-01-02T15:04:05",        // 秒（タイムゾーンなし）
+		"2006-01-02T15:04:05Z",       // UTC
+		"2006-01-02",                 // 日付のみ
+	}
+
+	var err error
+	for _, format := range formats {
+		ft.Time, err = time.Parse(format, s)
+		if err == nil {
+			return nil
+		}
+	}
+
+	return err
+}
+
+// MarshalJSON RFC3339形式で出力
+func (ft FlexibleTime) MarshalJSON() ([]byte, error) {
+	if ft.IsZero() {
+		return []byte("null"), nil
+	}
+	return json.Marshal(ft.Format(time.RFC3339))
+}
+
 // Task タスクモデル
 type Task struct {
-	ID          string     `json:"id"`
-	UserID      string     `json:"userId"` // タスクの所有者
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	DueDate     *time.Time `json:"dueDate,omitempty"`
-	IsCompleted bool       `json:"isCompleted"`
-	CompletedAt *time.Time `json:"completedAt,omitempty"`
-	Tags        []string   `json:"tags"`
-	Priority    string     `json:"priority"` // low, medium, high, urgent
+	ID          string        `json:"id"`
+	UserID      string        `json:"userId"` // タスクの所有者
+	Title       string        `json:"title"`
+	Description string        `json:"description"`
+	CreatedAt   FlexibleTime  `json:"createdAt"`
+	DueDate     *FlexibleTime `json:"dueDate,omitempty"`
+	IsCompleted bool          `json:"isCompleted"`
+	CompletedAt *FlexibleTime `json:"completedAt,omitempty"`
+	Tags        []string      `json:"tags"`
+	Priority    string        `json:"priority"` // low, medium, high, urgent
 }
 
 // TaskStore タスクのインメモリストア

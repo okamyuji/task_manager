@@ -97,7 +97,7 @@ func main() {
 
 // サンプルデータの初期化
 func initSampleData(store *TaskStore) {
-	now := time.Now()
+	now := FlexibleTime{Time: time.Now()}
 
 	// デフォルトユーザー（test@example.comのユーザーID）
 	defaultUserID := "user-1"
@@ -119,7 +119,7 @@ func initSampleData(store *TaskStore) {
 			Title:       "Riverpodを理解する",
 			Description: "Provider、StateNotifierの違いを学ぶ",
 			CreatedAt:   now,
-			DueDate:     timePtr(now.AddDate(0, 0, 7)),
+			DueDate:     flexTimePtr(now.AddDate(0, 0, 7)),
 			IsCompleted: false,
 			Tags:        []string{"学習", "フレームワーク"},
 			Priority:    "medium",
@@ -131,7 +131,7 @@ func initSampleData(store *TaskStore) {
 			Description: "ListViewとNavigationの使い方",
 			CreatedAt:   now,
 			IsCompleted: true,
-			CompletedAt: timePtr(now.Add(-24 * time.Hour)),
+			CompletedAt: flexTimePtr(now.Add(-24 * time.Hour)),
 			Tags:        []string{"実装"},
 			Priority:    "low",
 		},
@@ -141,7 +141,7 @@ func initSampleData(store *TaskStore) {
 			Title:       "REST API統合",
 			Description: "DioとRetrofitでバックエンドと通信",
 			CreatedAt:   now,
-			DueDate:     timePtr(now.AddDate(0, 0, 3)),
+			DueDate:     flexTimePtr(now.AddDate(0, 0, 3)),
 			IsCompleted: false,
 			Tags:        []string{"実装", "ネットワーク"},
 			Priority:    "urgent",
@@ -163,6 +163,7 @@ func initSampleData(store *TaskStore) {
 	}
 }
 
-func timePtr(t time.Time) *time.Time {
-	return &t
+func flexTimePtr(t time.Time) *FlexibleTime {
+	ft := FlexibleTime{Time: t}
+	return &ft
 }

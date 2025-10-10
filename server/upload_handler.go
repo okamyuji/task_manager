@@ -38,7 +38,11 @@ func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Failed to get image file")
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			logger.Error("ファイルクローズエラー", "error", err)
+		}
+	}()
 
 	logger.Debug("画像ファイル受信",
 		"filename", header.Filename,
@@ -63,7 +67,11 @@ func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create file")
 		return
 	}
-	defer dst.Close()
+	defer func() {
+		if err := dst.Close(); err != nil {
+			logger.Error("ファイルクローズエラー", "error", err, "path", filepath)
+		}
+	}()
 
 	copiedBytes, err := io.Copy(dst, file)
 	if err != nil {

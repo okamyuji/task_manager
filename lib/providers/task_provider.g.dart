@@ -8,15 +8,15 @@ part of 'task_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// タスク一覧の状態管理プロバイダー
+/// タスク一覧の状態管理プロバイダー（APIベース）
 
 @ProviderFor(TaskList)
 const taskListProvider = TaskListProvider._();
 
-/// タスク一覧の状態管理プロバイダー
+/// タスク一覧の状態管理プロバイダー（APIベース）
 final class TaskListProvider
     extends $AsyncNotifierProvider<TaskList, List<Task>> {
-  /// タスク一覧の状態管理プロバイダー
+  /// タスク一覧の状態管理プロバイダー（APIベース）
   const TaskListProvider._()
     : super(
         from: null,
@@ -36,9 +36,9 @@ final class TaskListProvider
   TaskList create() => TaskList();
 }
 
-String _$taskListHash() => r'3983e961aead4a8deb2f78a1b8dac9ba337c57ee';
+String _$taskListHash() => r'2c21792af9dd9b77f0b7560064f4e9ac1d6875d9';
 
-/// タスク一覧の状態管理プロバイダー
+/// タスク一覧の状態管理プロバイダー（APIベース）
 
 abstract class _$TaskList extends $AsyncNotifier<List<Task>> {
   FutureOr<List<Task>> build();

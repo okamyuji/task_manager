@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
-import 'remote_task_list_screen.dart';
 import 'task_list_screen.dart';
 
 /// ホーム画面（タブナビゲーション）
@@ -16,11 +15,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const TaskListScreen(),
-    const RemoteTaskListScreen(),
-    const _SettingsTab(),
-  ];
+  final List<Widget> _screens = [const TaskListScreen(), const _SettingsTab()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -39,12 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.task_outlined),
             selectedIcon: Icon(Icons.task),
-            label: 'ローカル',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.cloud_outlined),
-            selectedIcon: Icon(Icons.cloud),
-            label: 'リモート',
+            label: 'タスク',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

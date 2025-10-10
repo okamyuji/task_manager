@@ -135,7 +135,7 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request, userID 
 
 	// 作成日時を設定
 	if task.CreatedAt.IsZero() {
-		task.CreatedAt = time.Now()
+		task.CreatedAt = FlexibleTime{Time: time.Now()}
 	}
 
 	// タグが未設定の場合は空配列
@@ -267,7 +267,7 @@ func (h *TaskHandler) completeTask(w http.ResponseWriter, r *http.Request, userI
 	}
 
 	task.IsCompleted = true
-	now := time.Now()
+	now := FlexibleTime{Time: time.Now()}
 	task.CompletedAt = &now
 
 	logger.Info("タスク完了", "task_id", taskID, "user_id", userID, "title", task.Title)

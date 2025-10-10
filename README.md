@@ -2,7 +2,7 @@
 
 Flutter + Riverpod + Golang REST APIによるタスク管理アプリケーション
 
-## 📋 目次
+## 目次
 
 - [プロジェクト構成](#プロジェクト構成)
 - [技術スタック](#技術スタック)
@@ -79,19 +79,9 @@ go mod tidy
 go run .
 ```
 
-起動成功時の表示:
-
-```shell
-🚀 Task Manager Server 起動しました: http://localhost:8080
-📝 利用可能なエンドポイント:
-  POST   /auth/login              - ログイン
-  POST   /auth/register           - ユーザー登録
-  ...
-```
-
 ### 2. Flutter アプリ設定
 
-`lib/core/constants/app_constants.dart`を編集:
+`lib/core/constants/app_constants.dart`を編集する
 
 ```dart
 class AppConstants {
@@ -185,7 +175,7 @@ Content-Type: application/json
 
 ### タスクエンドポイント（要認証）
 
-すべてのタスクエンドポイントには`Authorization`ヘッダーが必要:
+すべてのタスクエンドポイントには`Authorization`ヘッダーが必要です
 
 ```http
 Authorization: Bearer {accessToken}
@@ -383,19 +373,19 @@ static const String apiBaseUrl = 'http://127.0.0.1:8080';
 
 #### 実機からの接続
 
-1. MacのローカルIPを確認:
+1. MacのローカルIPを確認してください
 
     ```bash
     ifconfig | grep "inet "
     ```
 
-2. `app_constants.dart`を更新:
+2. `app_constants.dart`を更新してください
 
     ```dart
     static const String apiBaseUrl = 'http://192.168.x.x:8080';
     ```
 
-3. ファイアウォール設定を確認
+3. ファイアウォール設定を確認してください
 
 ### JWT認証エラー
 
@@ -434,20 +424,20 @@ chmod +x test_api.sh
 ./test_api.sh
 ```
 
-このスクリプトは以下を自動テスト:
+このスクリプトは以下を自動テストします
 
-- ✅ ユーザー登録
-- ✅ ログイン
-- ✅ タスク一覧取得
-- ✅ タスク作成・更新・削除
-- ✅ タスク完了・未完了
-- ✅ トークンリフレッシュ
+- ユーザー登録
+- ログイン
+- タスク一覧取得
+- タスク作成・更新・削除
+- タスク完了・未完了
+- トークンリフレッシュ
 
 ---
 
 ## セキュリティに関する注意
 
-⚠️ このプロジェクトは**開発・学習用**です。本番環境では以下の対応が必要:
+⚠️ このプロジェクトは**開発・学習用**です。本番環境では以下の対応が必要です
 
 1. ❗ パスワードのハッシュ化（bcrypt）
 2. ❗ JWT秘密鍵の環境変数化
@@ -463,9 +453,9 @@ chmod +x test_api.sh
 
 #### クライアント側（Flutter）
 
-- ✅ **JWTトークンの安全な削除**: ログアウト時に`FlutterSecureStorage`から全てのトークン（access/refresh/userId）を削除
-- ✅ **自動トークンリフレッシュ**: `AuthInterceptor`が401エラーを検知して自動的にトークンをリフレッシュ
-- ✅ **セキュアストレージ**: `flutter_secure_storage`による暗号化保存
+- **JWTトークンの安全な削除**: ログアウト時に`FlutterSecureStorage`から全てのトークン（access/refresh/userId）を削除
+- **自動トークンリフレッシュ**: `AuthInterceptor`が401エラーを検知して自動的にトークンをリフレッシュ
+- **セキュアストレージ**: `flutter_secure_storage`による暗号化保存
 
 ```dart
 // lib/services/auth_service.dart
@@ -478,9 +468,9 @@ Future<void> logout() async {
 
 #### サーバー側（Go）
 
-- ✅ **ユーザー認可**: 全タスク操作で所有者チェックを実施
-- ✅ **JWT検証**: `authMiddleware`でトークンを検証し、ユーザーIDをコンテキストに設定
-- ✅ **リソースアクセス制御**: ユーザーは自分のタスクのみにアクセス可能
+- **ユーザー認可**: 全タスク操作で所有者チェックを実施
+- **JWT検証**: `authMiddleware`でトークンを検証し、ユーザーIDをコンテキストに設定
+- **リソースアクセス制御**: ユーザーは自分のタスクのみにアクセス可能
 
 ```go
 // server/task_handler.go - 所有者チェックの例
@@ -549,9 +539,8 @@ flutter analyze
 
 **テスト結果:**
 
-- ✅ 16テスト成功
-- ✅ 静的解析エラーなし
-- ⏭️ 2テストスキップ（統合テストに移行予定）
+- 全6テスト成功
+- 静的解析エラーなし
 
 ---
 
@@ -593,7 +582,7 @@ MIT License
 
 ## サポート
 
-問題が発生した場合は、以下を確認してください:
+問題が発生した場合は、以下を確認してください
 
 1. Goのバージョン（1.25.0以上）
 2. Flutterのバージョン（3.24.0以上）
