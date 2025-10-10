@@ -7,12 +7,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
 
-// JWT秘密鍵（本番環境では環境変数から読み込むべき）
-var jwtSecret = []byte("your-256-bit-secret-key-change-this-in-production")
+// JWT秘密鍵を環境変数から取得
+func getJWTSecret() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		// デフォルト値（開発環境用）
+		logger.Warn("JWT_SECRETが設定されていません。デフォルト値を使用します。本番環境では必ず環境変数を設定してください。")
+		return []byte("your-256-bit-secret-key-change-this-in-production")
+	}
+	return []byte(secret)
+}
+
+var jwtSecret = getJWTSecret()
 
 // JWTClaims JWTのペイロード
 type JWTClaims struct {

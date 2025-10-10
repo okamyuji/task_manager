@@ -1,7 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
+import '../repositories/api_client.dart';
+import 'verification_screen.dart';
 
 /// 登録画面
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -40,26 +43,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
 
     try {
-      await ref
-          .read(authProvider.notifier)
-          .register(
-            _emailController.text,
-            _passwordController.text,
-            _nameController.text,
-          );
+      final dio = ref.read(dioProvider);
 
+      // 認証なしで登録エンドポイントを呼び出す
+      await dio.post(
+        '/auth/register',
+        data: {
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'name': _nameController.text,
+        },
+      );
+
+      if (!mounted) return;
+
+      // 登録成功（未認証状態）→ 認証画面へ遷移
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              VerificationScreen(email: _emailController.text),
+        ),
+      );
+
+      // 認証画面から戻ってきたらログイン画面に戻る
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).pop();
       }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isRegistering = false;
+      });
+
+      final errorMessage =
+          e.response?.data?['message'] ?? e.message ?? '登録に失敗しました';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('登録に失敗しました: $errorMessage')));
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isRegistering = false;
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('登録に失敗しました: $e')));
-      }
+      if (!mounted) return;
+      setState(() {
+        _isRegistering = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('登録に失敗しました: $e')));
     }
   }
 
@@ -140,8 +168,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       if (value == null || value.isEmpty) {
                         return 'パスワードを入力してください';
                       }
-                      if (value.length < 6) {
-                        return 'パスワードは6文字以上で入力してください';
+                      if (value.length < 8) {
+                        return 'パスワードは8文字以上で入力してください';
+                      }
+                      // 英字と数字を含むかチェック
+                      if (!RegExp(r'[a-zA-Z]').hasMatch(value) ||
+                          !RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'パスワードは英字と数字を含む必要があります';
                       }
                       return null;
                     },

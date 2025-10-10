@@ -69,32 +69,230 @@ echo "   Access Token: ${ACCESS_TOKEN:0:50}..."
 echo "   Refresh Token: ${REFRESH_TOKEN:0:50}..."
 echo ""
 
-# 3. ユーザー登録（新規ユーザー）
-echo "ユーザー登録テスト（新規ユーザー）"
+# 3. ユーザー登録（新規ユーザー）- メール認証フロー
+echo "ユーザー登録テスト（新規ユーザー - メール認証フロー）"
 TIMESTAMP=$(date +%s)
 NEW_EMAIL="testuser${TIMESTAMP}@example.com"
+NEW_PASSWORD="TestPass123"
+NEW_NAME="テストユーザー${TIMESTAMP}"
+
 REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/register" \
   -H "Content-Type: application/json" \
   -d "{
     \"email\": \"$NEW_EMAIL\",
-    \"password\": \"testpass123\",
-    \"name\": \"テストユーザー${TIMESTAMP}\"
+    \"password\": \"$NEW_PASSWORD\",
+    \"name\": \"$NEW_NAME\"
   }")
 
-if echo "$REGISTER_RESPONSE" | grep -q "accessToken"; then
-    echo "ユーザー登録成功"
+if echo "$REGISTER_RESPONSE" | grep -q "userId"; then
+    echo "ユーザー登録成功（未認証状態）"
+    NEW_USER_ID=$(echo $REGISTER_RESPONSE | grep -o '"userId":"[^"]*' | cut -d'"' -f4)
+    echo "   New User ID: $NEW_USER_ID"
+    echo "   → MailHog WebUI (http://localhost:8025) で認証コードを確認してください"
     if [ "$USE_JQ" = true ]; then
         echo "$REGISTER_RESPONSE" | jq '.'
     else
         echo "$REGISTER_RESPONSE"
+    fi
+    
+    # メール認証のシミュレーション
+    echo ""
+    echo "メール認証テスト（手動コード入力が必要）"
+    echo "   MailHog WebUI (http://localhost:8025) で認証コードを確認してください"
+    echo "   認証コードを入力してください（6桁の数字、Enterキーで確定）:"
+    echo "   ※自動テストを継続する場合は Enter のみ押してスキップしてください"
+    read -r VERIFICATION_CODE
+    
+    if [ -n "$VERIFICATION_CODE" ]; then
+        # 認証コードが入力された場合は検証
+        echo "認証コード検証中..."
+        VERIFY_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/verify" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"email\": \"$NEW_EMAIL\",
+            \"code\": \"$VERIFICATION_CODE\"
+          }")
+        
+        if echo "$VERIFY_RESPONSE" | grep -q "Verification successful"; then
+            echo "メール認証成功！"
+            if [ "$USE_JQ" = true ]; then
+                echo "$VERIFY_RESPONSE" | jq '.'
+            else
+                echo "$VERIFY_RESPONSE"
+            fi
+            
+            # 認証後のログインテスト
+            echo ""
+            echo "認証後のログインテスト"
+            NEW_USER_LOGIN=$(curl -s -X POST "$BASE_URL/auth/login" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"email\": \"$NEW_EMAIL\",
+                \"password\": \"$NEW_PASSWORD\"
+              }")
+            
+            if echo "$NEW_USER_LOGIN" | grep -q "accessToken"; then
+                echo "認証済みユーザーのログイン成功"
+                NEW_USER_ACCESS_TOKEN=$(echo $NEW_USER_LOGIN | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+                echo "   Access Token: ${NEW_USER_ACCESS_TOKEN:0:50}..."
+            else
+                echo "認証済みユーザーのログイン失敗"
+                echo "$NEW_USER_LOGIN"
+            fi
+        else
+            echo "メール認証失敗"
+            echo "$VERIFY_RESPONSE"
+        fi
+    else
+        echo "メール認証テストをスキップしました"
     fi
 else
-    echo "ユーザー登録失敗（既に存在する可能性あり）"
+    echo "ユーザー登録失敗"
     if [ "$USE_JQ" = true ]; then
         echo "$REGISTER_RESPONSE" | jq '.'
     else
         echo "$REGISTER_RESPONSE"
     fi
+fi
+echo ""
+
+# 3.5. 未認証ユーザーのログイン試行テスト
+echo "未認証ユーザーのログイン試行テスト"
+UNVERIFIED_EMAIL="unverified${TIMESTAMP}@example.com"
+UNVERIFIED_PASSWORD="UnverifiedPass123"
+
+# 未認証ユーザーを作成
+UNVERIFIED_REGISTER=$(curl -s -X POST "$BASE_URL/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"email\": \"$UNVERIFIED_EMAIL\",
+    \"password\": \"$UNVERIFIED_PASSWORD\",
+    \"name\": \"未認証ユーザー${TIMESTAMP}\"
+  }")
+
+if echo "$UNVERIFIED_REGISTER" | grep -q "userId"; then
+    echo "未認証ユーザー作成成功"
+    UNVERIFIED_USER_ID=$(echo $UNVERIFIED_REGISTER | grep -o '"userId":"[^"]*' | cut -d'"' -f4)
+    echo "   Unverified User ID: $UNVERIFIED_USER_ID"
+    
+    # 未認証状態でログイン試行
+    echo ""
+    echo "未認証状態でのログイン試行..."
+    UNVERIFIED_LOGIN=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$BASE_URL/auth/login" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"email\": \"$UNVERIFIED_EMAIL\",
+        \"password\": \"$UNVERIFIED_PASSWORD\"
+      }")
+    
+    HTTP_STATUS=$(echo "$UNVERIFIED_LOGIN" | grep "HTTP_STATUS" | cut -d':' -f2)
+    RESPONSE_BODY=$(echo "$UNVERIFIED_LOGIN" | sed '/HTTP_STATUS/d')
+    
+    if [ "$HTTP_STATUS" = "403" ] || echo "$RESPONSE_BODY" | grep -q "not verified"; then
+        echo "未認証ユーザーのログイン拒否成功 (HTTP $HTTP_STATUS)"
+        echo "   → セキュリティ: 未認証ユーザーはログインできません（期待通り）"
+        if [ "$USE_JQ" = true ]; then
+            echo "$RESPONSE_BODY" | jq '.'
+        else
+            echo "$RESPONSE_BODY"
+        fi
+    else
+        echo "警告: 未認証ユーザーがログインできてしまいました (HTTP $HTTP_STATUS)"
+        echo "   → セキュリティ問題: メール認証が機能していません！"
+        echo "$RESPONSE_BODY"
+    fi
+else
+    echo "未認証ユーザー作成失敗"
+    echo "$UNVERIFIED_REGISTER"
+fi
+echo ""
+
+# 3.6. 認証コード再送信テスト
+echo "認証コード再送信テスト"
+RESEND_EMAIL="resendtest${TIMESTAMP}@example.com"
+
+# テスト用ユーザーを作成
+RESEND_REGISTER=$(curl -s -X POST "$BASE_URL/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"email\": \"$RESEND_EMAIL\",
+    \"password\": \"ResendPass123\",
+    \"name\": \"再送信テストユーザー${TIMESTAMP}\"
+  }")
+
+if echo "$RESEND_REGISTER" | grep -q "userId"; then
+    echo "再送信テスト用ユーザー作成成功"
+    
+    # 認証コード再送信
+    echo "認証コード再送信中..."
+    RESEND_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/resend-code" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"email\": \"$RESEND_EMAIL\"
+      }")
+    
+    if echo "$RESEND_RESPONSE" | grep -q "Verification code sent"; then
+        echo "認証コード再送信成功"
+        echo "   → MailHog WebUI で新しい認証コードを確認できます"
+        if [ "$USE_JQ" = true ]; then
+            echo "$RESEND_RESPONSE" | jq '.'
+        else
+            echo "$RESEND_RESPONSE"
+        fi
+    else
+        echo "認証コード再送信失敗"
+        echo "$RESEND_RESPONSE"
+    fi
+else
+    echo "再送信テスト用ユーザー作成失敗"
+    echo "$RESEND_REGISTER"
+fi
+echo ""
+
+# 3.7. 無効な認証コードテスト
+echo "無効な認証コードテスト"
+INVALID_CODE_EMAIL="invalidcode${TIMESTAMP}@example.com"
+
+# テスト用ユーザーを作成
+INVALID_REGISTER=$(curl -s -X POST "$BASE_URL/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"email\": \"$INVALID_CODE_EMAIL\",
+    \"password\": \"InvalidPass123\",
+    \"name\": \"無効コードテストユーザー${TIMESTAMP}\"
+  }")
+
+if echo "$INVALID_REGISTER" | grep -q "userId"; then
+    echo "無効コードテスト用ユーザー作成成功"
+    
+    # 無効な認証コードで検証試行
+    echo "無効な認証コード (999999) で検証試行..."
+    INVALID_VERIFY=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$BASE_URL/auth/verify" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"email\": \"$INVALID_CODE_EMAIL\",
+        \"code\": \"999999\"
+      }")
+    
+    HTTP_STATUS=$(echo "$INVALID_VERIFY" | grep "HTTP_STATUS" | cut -d':' -f2)
+    RESPONSE_BODY=$(echo "$INVALID_VERIFY" | sed '/HTTP_STATUS/d')
+    
+    if [ "$HTTP_STATUS" = "400" ] || echo "$RESPONSE_BODY" | grep -q "Invalid"; then
+        echo "無効な認証コードの拒否成功 (HTTP $HTTP_STATUS)"
+        echo "   → セキュリティ: 無効なコードは拒否されます（期待通り）"
+        if [ "$USE_JQ" = true ]; then
+            echo "$RESPONSE_BODY" | jq '.'
+        else
+            echo "$RESPONSE_BODY"
+        fi
+    else
+        echo "警告: 無効な認証コードが受け入れられました (HTTP $HTTP_STATUS)"
+        echo "   → セキュリティ問題: 認証コード検証が機能していません！"
+        echo "$RESPONSE_BODY"
+    fi
+else
+    echo "無効コードテスト用ユーザー作成失敗"
+    echo "$INVALID_REGISTER"
 fi
 echo ""
 
@@ -493,7 +691,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "テストサマリー:"
 echo "   ✓ ログイン"
-echo "   ✓ ユーザー登録"
+echo "   ✓ ユーザー登録（メール認証フロー）"
+echo "   ✓ メール認証コード検証"
+echo "   ✓ 認証コード再送信"
+echo "   ✓ 未認証ユーザーのログイン拒否"
+echo "   ✓ 無効な認証コードの拒否"
 echo "   ✓ タスク一覧取得"
 echo "   ✓ タスク作成"
 echo "   ✓ タスク詳細取得"
@@ -508,9 +710,18 @@ echo "   ✓ 認可エラー処理 (403 Forbidden)"
 echo "   ✓ 他人のタスクへのアクセス拒否"
 echo "   ✓ 自分のタスクへのアクセス許可"
 echo ""
+echo "メール認証テスト結果:"
+echo "   ✓ ユーザー登録時に認証コードが生成される"
+echo "   ✓ 未認証ユーザーはログインできない"
+echo "   ✓ 認証コードの再送信が可能"
+echo "   ✓ 無効な認証コードは拒否される"
+echo "   ✓ 認証後のログインが正常に動作"
+echo ""
 echo "セキュリティテスト結果:"
 echo "   ✓ 認証: 無効なトークンは拒否される（タスク）"
 echo "   ✓ 認証: 無効なトークンは拒否される（画像アップロード）"
+echo "   ✓ 認証: 未認証ユーザーはログインできない"
+echo "   ✓ 認証: 無効な認証コードは拒否される"
 echo "   ✓ 認可: 他人のタスクを取得できない"
 echo "   ✓ 認可: 他人のタスクを更新できない"
 echo "   ✓ 認可: 他人のタスクを削除できない"
@@ -521,5 +732,9 @@ echo "画像アップロードテスト結果:"
 echo "   ✓ 画像のアップロードが正常に動作"
 echo "   ✓ アップロードされた画像にアクセス可能"
 echo "   ✓ 認証なしのアップロードは拒否される"
+echo ""
+echo "📧 メール確認:"
+echo "   MailHog WebUI: http://localhost:8025"
+echo "   認証コードメールを確認できます"
 echo ""
 

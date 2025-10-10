@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
+import 'verification_screen.dart';
 
 /// ログイン画面
 class LoginScreen extends ConsumerStatefulWidget {
@@ -40,15 +42,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .read(authProvider.notifier)
           .login(_emailController.text, _passwordController.text);
       // authStateが更新されAppがHomeScreenを表示
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoggingIn = false;
-        });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoggingIn = false;
+      });
+
+      final errorMessage =
+          e.response?.data?['message'] as String? ?? e.message ?? 'ログインに失敗しました';
+
+      // 未認証ユーザーの場合は認証画面に遷移
+      if (errorMessage.contains('not verified') ||
+          errorMessage.contains('未認証')) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('メール認証が必要です'),
+            content: const Text('アカウントが未認証です。認証コードを確認してください。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('キャンセル'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          VerificationScreen(email: _emailController.text),
+                    ),
+                  );
+                },
+                child: const Text('認証画面へ'),
+              ),
+            ],
+          ),
+        );
+      } else {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('ログインに失敗しました: $e')));
+        ).showSnackBar(SnackBar(content: Text('ログインに失敗しました: $errorMessage')));
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoggingIn = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ログインに失敗しました: $e')));
     }
   }
 

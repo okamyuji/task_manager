@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -57,19 +58,33 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-// corsMiddleware CORSヘッダーを追加するミドルウェア
+// corsMiddleware CORSヘッダーを追加するミドルウェア（本番対応版）
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// CORSヘッダーを設定
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+
+		// 許可されたオリジンを環境変数から取得
+		allowedOrigins := getAllowedOrigins()
+
+		// オリジンチェック
+		if isOriginAllowed(origin, allowedOrigins) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		} else if len(allowedOrigins) == 1 && allowedOrigins[0] == "*" {
+			// 開発環境: 全てのオリジンを許可
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else {
+			logger.Warn("許可されていないオリジン", "origin", origin)
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Max-Age", "3600")
+		w.Header().Set("Access-Control-Max-Age", "7200")
 
 		// プリフライトリクエストの処理
 		if r.Method == http.MethodOptions {
 			logger.Debug("CORSプリフライトリクエスト",
-				"origin", r.Header.Get("Origin"),
+				"origin", origin,
 				"method", r.Header.Get("Access-Control-Request-Method"),
 			)
 			w.WriteHeader(http.StatusNoContent)
@@ -78,6 +93,36 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+// getAllowedOrigins 許可されたオリジンを取得
+func getAllowedOrigins() []string {
+	originsEnv := os.Getenv("ALLOWED_ORIGINS")
+	if originsEnv == "" {
+		// デフォルト: 開発環境用（全て許可）
+		return []string{"*"}
+	}
+
+	// カンマ区切りで分割
+	var origins []string
+	for _, origin := range strings.Split(originsEnv, ",") {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			origins = append(origins, trimmed)
+		}
+	}
+
+	return origins
+}
+
+// isOriginAllowed オリジンが許可されているかチェック
+func isOriginAllowed(origin string, allowedOrigins []string) bool {
+	for _, allowed := range allowedOrigins {
+		if allowed == "*" || allowed == origin {
+			return true
+		}
+	}
+	return false
 }
 
 // authMiddleware JWT認証を行うミドルウェア

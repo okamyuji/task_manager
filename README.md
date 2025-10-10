@@ -65,19 +65,99 @@ task_manager/
 
 ## クイックスタート
 
-### 1. サーバー起動
+### オプションA: Docker Compose（推奨）
+
+#### 前提条件
+
+- Docker Engine 20.10以上
+- Docker Compose v2.0以上
+
+#### 起動手順
+
+```bash
+# 環境変数ファイルを作成
+cp env.example .env
+
+# .envファイルを編集（本番環境用の値を設定）
+# JWT_SECRET: 強力なランダム文字列に変更
+# ALLOWED_ORIGINS: 許可するドメインを指定（開発環境では*でOK）
+
+# Dockerコンテナを起動
+docker compose up -d
+
+# ログを確認
+docker compose logs -f
+```
+
+#### サービスURL
+
+- **APIサーバー**: `http://localhost:8080`
+- **MailHog WebUI**: `http://localhost:8025`（メール確認用）
+
+#### コンテナ管理
+
+```bash
+# 停止（データは保持）
+docker compose stop
+
+# 停止 + コンテナ削除（データは保持）
+docker compose down
+
+# 停止 + 全データ削除
+docker compose down -v
+```
+
+#### データの永続化
+
+以下のディレクトリにデータが保存されます：
+
+- `./data/` - SQLiteデータベース
+- `./server/uploads/` - アップロード画像
+
+#### トラブルシューティング
+
+**ポート競合の場合:**
+
+`compose.yaml`を編集してポートを変更：
+
+```yaml
+services:
+  api:
+    ports:
+      - "8081:8080"  # ホスト側ポート変更
+```
+
+**ビルドエラーの場合:**
+
+```bash
+docker compose build --no-cache
+docker compose up -d
+```
+
+**データベースリセット:**
+
+```bash
+docker compose down
+rm -f data/tasks.db*
+docker compose up -d
+```
+
+### オプションB: ローカル実行
+
+#### 1. サーバー起動
 
 ```bash
 # サーバーディレクトリに移動
 cd server
 
 # 依存関係インストール
-go get github.com/google/uuid
 go mod tidy
 
 # サーバー起動（ポート8080）
 go run .
 ```
+
+**注意**: ローカル実行時はメール認証機能が動作しません（MailHogが必要）。
 
 ### 2. Flutter アプリ設定
 
@@ -114,12 +194,28 @@ flutter pub run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
-### 4. テストユーザーでログイン
+### 4. ユーザー登録とログイン
+
+#### 新規ユーザー登録（メール認証あり）
+
+1. アプリで「新規登録」をタップ
+2. 名前、メールアドレス、パスワードを入力
+   - パスワードは8文字以上、英数字を含む必要があります
+3. 登録ボタンをクリック
+4. メール認証画面が表示されます
+5. MailHog WebUI (`http://localhost:8025`) で認証コードを確認
+6. 6桁の認証コードを入力
+7. 認証完了後、ログイン画面に戻る
+8. メールアドレスとパスワードでログイン
+
+#### テストユーザー（既に認証済み）
 
 ```text
 Email: test@example.com
 Password: password123
 ```
+
+このユーザーは初期データとして既に認証済みです。
 
 ---
 
@@ -127,7 +223,9 @@ Password: password123
 
 ### 認証エンドポイント
 
-#### ユーザー登録
+#### ユーザー登録（メール認証フロー）
+
+**ステップ1: ユーザー登録:**
 
 ```http
 POST /auth/register
@@ -135,8 +233,30 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "password": "password123",
+  "password": "StrongPass123",
   "name": "ユーザー名"
+}
+```
+
+レスポンス（未認証状態）:
+
+```json
+{
+  "message": "User created. Please check your email for verification code.",
+  "userId": "uuid",
+  "email": "user@example.com"
+}
+```
+
+**ステップ2: メール認証:**
+
+```http
+POST /auth/verify
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "code": "123456"
 }
 ```
 
@@ -144,9 +264,31 @@ Content-Type: application/json
 
 ```json
 {
-  "accessToken": "eyJhbGc...",
-  "refreshToken": "eyJhbGc...",
+  "message": "Verification successful",
   "userId": "uuid"
+}
+```
+
+**ステップ3: ログイン:**
+
+認証完了後、通常のログインが可能になります。
+
+#### 認証コード再送信
+
+```http
+POST /auth/resend-code
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+レスポンス:
+
+```json
+{
+  "message": "Verification code sent"
 }
 ```
 
@@ -437,17 +579,66 @@ chmod +x test_api.sh
 
 ## セキュリティに関する注意
 
-⚠️ このプロジェクトは**開発・学習用**です。本番環境では以下の対応が必要です
+### 実装済みセキュリティ機能 ✅
 
-1. ❗ パスワードのハッシュ化（bcrypt）
-2. ❗ JWT秘密鍵の環境変数化
-3. ❗ HTTPSの使用
-4. ❗ レート制限の実装
-5. ❗ データベースの使用（現在はインメモリ）
-6. ❗ 入力バリデーションの強化
-7. ✅ ログとモニタリング（slog実装済み）
-8. ❗ 適切なCORS設定
-9. ✅ JWT認証とユーザー認可（実装済み）
+このプロジェクトには以下のセキュリティ機能が実装されています：
+
+1. ✅ **パスワードのハッシュ化（bcrypt）**
+   - bcrypt（コスト係数12）によるパスワードハッシュ化
+   - `golang.org/x/crypto/bcrypt`使用
+
+2. ✅ **JWT秘密鍵の環境変数化**
+   - `JWT_SECRET`環境変数から読み込み
+   - デフォルト値は開発環境用のみ
+
+3. ✅ **レート制限の実装**
+   - 認証エンドポイント: 5 req/min per IP
+   - タスクAPI: 60 req/min per user
+   - アップロード: 10 req/min per user
+   - Token Bucketアルゴリズム使用
+
+4. ✅ **SQLite3データベース**
+   - インメモリからSQLite3に移行
+   - マイグレーション管理（golang-migrate）
+   - トランザクション対応
+
+5. ✅ **入力バリデーション強化**
+   - メールフォーマット検証（正規表現）
+   - パスワード強度検証（8文字以上、英数字含む）
+   - タスクデータバリデーション
+
+6. ✅ **本番対応CORS設定**
+   - `ALLOWED_ORIGINS`環境変数によるホワイトリスト
+   - `Access-Control-Allow-Credentials`対応
+   - 開発環境では`*`許可
+
+7. ✅ **メール認証システム**
+   - ユーザー登録時の6桁認証コード送信
+   - 認証コード有効期限（15分）
+   - 認証コード再送信機能
+
+8. ✅ **ログとモニタリング（slog実装済み）**
+
+9. ✅ **JWT認証とユーザー認可（実装済み）**
+   - アクセストークン（15分）
+   - リフレッシュトークン（7日）
+   - ユーザーごとのリソースアクセス制御
+
+10. ✅ **prepared statementによるSQLインジェクション対策**
+
+### 本番環境で追加対応が必要な項目 ⚠️
+
+1. ❗ **HTTPSの使用**
+   - Leapcellなどのホスティングサービスで対応
+   - または Nginx/Caddy でリバースプロキシ
+
+2. ❗ **本番用SMTPサーバー**
+   - 現在はMailHog（開発用）
+   - SendGrid、AWS SES、Gmail SMTP等に切り替え
+
+3. ❗ **定期的なバックアップ**
+   - SQLiteデータベースの定期バックアップ
+   - アップロード画像のバックアップ
 
 ### 実装済みのセキュリティ機能
 
@@ -544,13 +735,100 @@ flutter analyze
 
 ---
 
+## 本番環境への展開
+
+### 環境変数の設定
+
+本番環境では以下を**必ず**設定してください：
+
+```env
+# 強力なランダム文字列（256ビット推奨）
+JWT_SECRET=your-super-secret-production-key-here
+
+# 許可するドメインを明示的に指定（カンマ区切り）
+ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+
+# 本番用SMTPサーバー
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+MAIL_FROM=noreply@yourdomain.com
+
+# デバッグモードはOFF
+DEBUG=false
+```
+
+### SMTPサーバーの切り替え
+
+本番環境ではMailHogの代わりに実際のSMTPサーバーを使用：
+
+**推奨サービス:**
+
+- SendGrid
+- AWS SES
+- Gmail SMTP（テスト用）
+- Mailgun
+
+### HTTPSの有効化
+
+#### オプション1: Leapcell等のホスティングサービス
+
+自動的にHTTPSが有効化されます。
+
+#### オプション2: Nginx リバースプロキシ
+
+```yaml
+# compose.yaml に追加
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - api
+```
+
+### データベースのバックアップ
+
+定期的にバックアップを実施：
+
+```bash
+# データベースバックアップ
+docker compose exec api sqlite3 /app/data/tasks.db ".backup /app/data/backup.db"
+
+# ホストにコピー
+docker compose cp api:/app/data/backup.db ./backups/tasks_$(date +%Y%m%d).db
+
+# cronで自動化（例: 毎日2時）
+0 2 * * * cd /path/to/task_manager && docker compose exec api sqlite3 /app/data/tasks.db ".backup /app/data/backup.db"
+```
+
+### よくある質問
+
+- Q: MailHogで送信されたメールが見つからない
+
+A: MailHog WebUI (`http://localhost:8025`) にアクセスして確認してください。メールはメモリに保存されるため、コンテナを再起動すると消えます。
+
+- Q: データベースの場所は？
+
+A: `./data/tasks.db` に保存されています。SQLiteブラウザで直接開くことも可能です。
+
+- Q: レート制限を変更したい
+
+A: `server/middleware/rate_limiter.go` の `InitRateLimiters` 関数を編集して再ビルドしてください。
+
+---
+
 ## 今後の拡張
 
-### Phase 2: データベース統合
+### Phase 2: データベーススケーリング
 
-- PostgreSQL または MySQL
-- マイグレーション管理
-- トランザクション処理
+- PostgreSQL / MySQL移行
+- レプリケーション
+- コネクションプーリング最適化
 
 ### Phase 3: キャッシング
 
@@ -563,14 +841,14 @@ flutter analyze
 - WebSocket（リアルタイム更新）
 - GraphQL API
 - バックグラウンドジョブ処理
-- メール通知
+- プッシュ通知
 
 ### Phase 5: 運用機能
 
 - ログローテーション
 - メトリクス収集（Prometheus）
 - アラート設定
-- バックアップ・リストア
+- 自動バックアップ
 
 ---
 

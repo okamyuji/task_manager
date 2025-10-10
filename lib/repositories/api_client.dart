@@ -73,4 +73,14 @@ abstract class ApiClient {
   /// タスクの未完了状態に戻す
   @PATCH('/tasks/{id}/incomplete')
   Future<Task> incompleteTask(@Path('id') String id);
+
+  /// メールアドレスと認証コードでアカウントを認証
+  @POST('/auth/verify')
+  Future<HttpResponse<dynamic>> verifyEmail(@Body() Map<String, dynamic> body);
+
+  /// 認証コードを再送信
+  @POST('/auth/resend-code')
+  Future<HttpResponse<dynamic>> resendVerificationCode(
+    @Body() Map<String, dynamic> body,
+  );
 }

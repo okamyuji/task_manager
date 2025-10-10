@@ -1,0 +1,41 @@
+# ビルド最適化用
+
+# Git
+.git
+.gitignore
+
+# ドキュメント
+README.md
+*.md
+
+# テストファイル
+*_test.go
+test_*.go
+
+# データファイル
+*.db
+*.db-shm
+*.db-wal
+data/
+uploads/
+
+# スクリプト
+*.sh
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp
+*.log
+
+# IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS固有ファイル
+.DS_Store
+Thumbs.db
+
