@@ -1,11 +1,12 @@
 -- シードデータ: テストユーザー（パスワード: password123）
 
 -- テストユーザー（bcryptハッシュ: password123, cost=12）
+-- ハッシュは bcrypt.GenerateFromPassword([]byte("password123"), 12) で生成
 INSERT OR IGNORE INTO users (id, email, password_hash, name, is_verified, created_at, updated_at) 
 VALUES (
     'user-1',
     'test@example.com',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIpPnVZFPu',
+    '$2a$12$rJPUanPMucRTRcs7CfkBqe/VBNxrDWvbP7TsFEITDzy17X5k8nXla',
     'テストユーザー',
     TRUE,
     datetime('now'),

@@ -9,21 +9,30 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
-// JWT秘密鍵を環境変数から取得
-func getJWTSecret() []byte {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		// デフォルト値（開発環境用）
-		logger.Warn("JWT_SECRETが設定されていません。デフォルト値を使用します。本番環境では必ず環境変数を設定してください。")
-		return []byte("your-256-bit-secret-key-change-this-in-production")
-	}
-	return []byte(secret)
-}
+var (
+	jwtSecret     []byte
+	jwtSecretOnce sync.Once
+)
 
-var jwtSecret = getJWTSecret()
+// getJWTSecret JWT秘密鍵を環境変数から取得（遅延初期化）
+func getJWTSecret() []byte {
+	jwtSecretOnce.Do(func() {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			// デフォルト値（開発環境用）
+			// 注意: logger初期化前に呼ばれる可能性があるため、標準出力に警告
+			fmt.Println("警告: JWT_SECRETが設定されていません。デフォルト値を使用します。本番環境では必ず環境変数を設定してください。")
+			jwtSecret = []byte("your-256-bit-secret-key-change-this-in-production")
+		} else {
+			jwtSecret = []byte(secret)
+		}
+	})
+	return jwtSecret
+}
 
 // JWTClaims JWTのペイロード
 type JWTClaims struct {
@@ -80,7 +89,7 @@ func generateToken(userID, email string, expiration time.Duration) (string, erro
 
 	// 署名
 	message := headerEncoded + "." + claimsEncoded
-	signature := createSignature(message, jwtSecret)
+	signature := createSignature(message, getJWTSecret())
 
 	// トークン生成
 	token := message + "." + signature
@@ -108,7 +117,7 @@ func VerifyToken(tokenString string) (*JWTClaims, error) {
 
 	// 署名検証
 	message := headerEncoded + "." + claimsEncoded
-	expectedSignature := createSignature(message, jwtSecret)
+	expectedSignature := createSignature(message, getJWTSecret())
 
 	if signatureEncoded != expectedSignature {
 		logger.Warn("JWT署名検証失敗")
