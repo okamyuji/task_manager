@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/utils/date_formatter.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
+import '../widgets/cached_image.dart';
 import 'edit_task_screen.dart';
 
 /// タスク詳細画面
@@ -103,7 +104,7 @@ class TaskDetailScreen extends ConsumerWidget {
                 context,
                 icon: Icons.event,
                 label: '期限',
-                value: DateFormatter.formatDateTime(task.dueDate!),
+                value: DateFormatter.formatDateTimeFlexible(task.dueDate!),
               ),
 
             // 完了日
@@ -116,6 +117,21 @@ class TaskDetailScreen extends ConsumerWidget {
               ),
 
             const Divider(height: 32),
+
+            // 画像
+            if (task.imageUrl != null) ...[
+              Text('画像', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedImage(
+                  imageUrl: task.imageUrl!,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // タグ
             if (task.tags.isNotEmpty) ...[

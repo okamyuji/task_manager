@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/interceptors/auth_interceptor.dart';
+import '../core/interceptors/retry_interceptor.dart';
 import '../models/task.dart';
 
 part 'api_client.g.dart';
@@ -23,10 +24,19 @@ Dio dio(Ref ref) {
     ),
   );
 
-  // 認証インターセプターを追加（最初に追加）
+  // リトライインターセプターを追加（最初に追加して、他のインターセプターの前にリトライ処理を実行）
+  dio.interceptors.add(
+    RetryInterceptor(
+      maxRetries: 3,
+      retryDelay: const Duration(seconds: 1),
+      useExponentialBackoff: true,
+    ),
+  );
+
+  // 認証インターセプターを追加
   dio.interceptors.add(AuthInterceptor(dio));
 
-  // ログインターセプターを追加
+  // ログインターセプターを追加（開発時のデバッグ用）
   dio.interceptors.add(
     LogInterceptor(requestBody: true, responseBody: true, error: true),
   );

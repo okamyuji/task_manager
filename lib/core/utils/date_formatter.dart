@@ -23,6 +23,15 @@ class DateFormatter {
     return _dateTimeFormat.format(dateTime);
   }
 
+  /// 日時を文字列に変換（時刻が0:00の場合は日付のみ表示）
+  static String formatDateTimeFlexible(DateTime dateTime) {
+    // 時刻が0:00の場合は日付のみ表示
+    if (dateTime.hour == 0 && dateTime.minute == 0) {
+      return _dateFormat.format(dateTime);
+    }
+    return _dateTimeFormat.format(dateTime);
+  }
+
   /// 時刻を文字列に変換
   static String formatTime(DateTime time) {
     return _timeFormat.format(time);

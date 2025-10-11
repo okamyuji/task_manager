@@ -103,4 +103,9 @@ class ImageUpload extends _$ImageUpload {
   void reset() {
     state = const ImageUploadState();
   }
+
+  /// アップロード済みURLを設定（編集画面用）
+  void setUploadedUrl(String url) {
+    state = state.copyWith(uploadedUrl: url);
+  }
 }

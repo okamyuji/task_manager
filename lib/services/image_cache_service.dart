@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../core/interceptors/retry_interceptor.dart';
+
 part 'image_cache_service.g.dart';
 
 /// 画像キャッシュサービスのプロバイダー
@@ -131,7 +133,23 @@ class ImageCacheService {
 
   /// 画像をアップロード
   Future<String> uploadImage(File imageFile, String uploadUrl) async {
-    final dio = Dio();
+    // リトライ機能付きDioインスタンスを作成
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+      ),
+    );
+
+    // リトライインターセプターを追加
+    dio.interceptors.add(
+      RetryInterceptor(
+        maxRetries: 3,
+        retryDelay: const Duration(seconds: 2),
+        useExponentialBackoff: true,
+      ),
+    );
+
     final compressedBytes = await compressImage(imageFile);
 
     final formData = FormData.fromMap({

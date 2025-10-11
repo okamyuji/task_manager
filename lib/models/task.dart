@@ -18,6 +18,7 @@ sealed class Task with _$Task {
     DateTime? completedAt,
     @Default([]) List<String> tags,
     @Default(TaskPriority.medium) TaskPriority priority,
+    String? imageUrl, // 添付画像URL
   }) = _Task;
 
   factory Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);

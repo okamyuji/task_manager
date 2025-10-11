@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/constants/app_constants.dart';
 import '../core/utils/date_formatter.dart';
 import '../models/task.dart';
+import '../providers/image_upload_provider.dart';
 import '../providers/task_provider.dart';
+import '../widgets/cached_image.dart';
 
 /// タスク追加画面
 class AddTaskScreen extends ConsumerStatefulWidget {
@@ -33,6 +36,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final uploadState = ref.watch(imageUploadProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('タスク追加'),
@@ -103,7 +108,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               leading: const Icon(Icons.event),
               title: Text(
                 _selectedDueDate != null
-                    ? DateFormatter.formatDateTime(_selectedDueDate!)
+                    ? DateFormatter.formatDateTimeFlexible(_selectedDueDate!)
                     : '期限を設定',
               ),
               trailing: _selectedDueDate != null
@@ -120,6 +125,111 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(color: Colors.grey.shade400),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 画像アップロード
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('画像', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    if (uploadState.uploadedUrl != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedImage(
+                          imageUrl: uploadState.uploadedUrl!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              ref.read(imageUploadProvider.notifier).reset();
+                            },
+                            icon: const Icon(Icons.close, size: 18),
+                            label: const Text('削除'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (uploadState.isUploading) ...[
+                      Center(
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              value: uploadState.progress,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'アップロード中... ${(uploadState.progress * 100).toInt()}%',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final uploadUrl =
+                                    '${AppConstants.apiBaseUrl}/upload';
+                                ref
+                                    .read(imageUploadProvider.notifier)
+                                    .pickAndUploadFromCamera(uploadUrl);
+                              },
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('カメラ'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final uploadUrl =
+                                    '${AppConstants.apiBaseUrl}/upload';
+                                ref
+                                    .read(imageUploadProvider.notifier)
+                                    .pickAndUploadFromGallery(uploadUrl);
+                              },
+                              icon: const Icon(Icons.photo_library),
+                              label: const Text('ギャラリー'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (uploadState.errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          uploadState.errorMessage!,
+                          style: TextStyle(
+                            color: Colors.red[900],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -183,20 +293,52 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     );
 
     if (date != null && mounted) {
-      final time = await showTimePicker(
+      // 時刻も設定するか確認
+      final includeTime = await showDialog<bool>(
         context: context,
-        initialTime: TimeOfDay.now(),
+        builder: (context) => AlertDialog(
+          title: const Text('時刻も設定しますか？'),
+          content: const Text('日付のみの場合は「日付のみ」を、\n時刻も指定する場合は「時刻も設定」を選択してください。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('日付のみ'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('時刻も設定'),
+            ),
+          ],
+        ),
       );
 
-      if (time != null) {
+      if (includeTime == null) return; // キャンセルされた場合
+
+      if (includeTime) {
+        // 時刻を選択
+        if (!mounted) return;
+        final time = await showTimePicker(
+          context: context,
+          initialTime: _selectedDueDate != null
+              ? TimeOfDay.fromDateTime(_selectedDueDate!)
+              : TimeOfDay.now(),
+        );
+
+        if (time != null && mounted) {
+          setState(() {
+            _selectedDueDate = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              time.hour,
+              time.minute,
+            );
+          });
+        }
+      } else {
+        // 日付のみ（時刻は0:00）
         setState(() {
-          _selectedDueDate = DateTime(
-            date.year,
-            date.month,
-            date.day,
-            time.hour,
-            time.minute,
-          );
+          _selectedDueDate = DateTime(date.year, date.month, date.day, 0, 0);
         });
       }
     }
@@ -240,6 +382,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       return;
     }
 
+    final uploadState = ref.read(imageUploadProvider);
+
     final task = Task(
       id: _uuid.v4(),
       title: _titleController.text,
@@ -248,10 +392,14 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       dueDate: _selectedDueDate,
       priority: _selectedPriority,
       tags: _tags,
+      imageUrl: uploadState.uploadedUrl, // アップロードした画像URL
     );
 
     try {
       await ref.read(taskListProvider.notifier).addTask(task);
+
+      // 画像アップロード状態をリセット
+      ref.read(imageUploadProvider.notifier).reset();
 
       if (mounted) {
         ScaffoldMessenger.of(

@@ -45,5 +45,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>タスクに画像を添付するためにカメラを使用します</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>タスクに画像を添付するためにフォトライブラリにアクセスします</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>撮影した画像をフォトライブラリに保存します</string>
 </dict>
 </plist>

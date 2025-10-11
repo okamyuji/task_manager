@@ -19,6 +19,7 @@ type Task struct {
 	IsCompleted bool
 	CompletedAt *time.Time
 	Priority    string
+	ImageUrl    *string // 添付画像URL
 	Tags        []string
 }
 
@@ -60,10 +61,10 @@ func (r *taskRepository) Create(task *Task) error {
 
 	// タスク挿入
 	query := `
-		INSERT INTO tasks (id, user_id, title, description, created_at, due_date, is_completed, completed_at, priority)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO tasks (id, user_id, title, description, created_at, due_date, is_completed, completed_at, priority, image_url)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	_, err = tx.Exec(query, task.ID, task.UserID, task.Title, task.Description, task.CreatedAt, task.DueDate, task.IsCompleted, task.CompletedAt, task.Priority)
+	_, err = tx.Exec(query, task.ID, task.UserID, task.Title, task.Description, task.CreatedAt, task.DueDate, task.IsCompleted, task.CompletedAt, task.Priority, task.ImageUrl)
 	if err != nil {
 		return fmt.Errorf("タスク作成失敗: %w", err)
 	}
@@ -85,7 +86,7 @@ func (r *taskRepository) Create(task *Task) error {
 func (r *taskRepository) GetByID(id string) (*Task, error) {
 	task := &Task{}
 	query := `
-		SELECT id, user_id, title, description, created_at, due_date, is_completed, completed_at, priority
+		SELECT id, user_id, title, description, created_at, due_date, is_completed, completed_at, priority, image_url
 		FROM tasks
 		WHERE id = ?
 	`
@@ -99,6 +100,7 @@ func (r *taskRepository) GetByID(id string) (*Task, error) {
 		&task.IsCompleted,
 		&task.CompletedAt,
 		&task.Priority,
+		&task.ImageUrl,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -120,7 +122,7 @@ func (r *taskRepository) GetByID(id string) (*Task, error) {
 // GetByUserID ユーザーIDでタスク一覧を取得
 func (r *taskRepository) GetByUserID(userID string) ([]*Task, error) {
 	query := `
-		SELECT id, user_id, title, description, created_at, due_date, is_completed, completed_at, priority
+		SELECT id, user_id, title, description, created_at, due_date, is_completed, completed_at, priority, image_url
 		FROM tasks
 		WHERE user_id = ?
 		ORDER BY created_at DESC
@@ -146,6 +148,7 @@ func (r *taskRepository) GetByUserID(userID string) ([]*Task, error) {
 			&task.IsCompleted,
 			&task.CompletedAt,
 			&task.Priority,
+			&task.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -177,10 +180,10 @@ func (r *taskRepository) Update(task *Task) error {
 	// タスク更新
 	query := `
 		UPDATE tasks
-		SET title = ?, description = ?, due_date = ?, is_completed = ?, completed_at = ?, priority = ?
+		SET title = ?, description = ?, due_date = ?, is_completed = ?, completed_at = ?, priority = ?, image_url = ?
 		WHERE id = ?
 	`
-	result, err := tx.Exec(query, task.Title, task.Description, task.DueDate, task.IsCompleted, task.CompletedAt, task.Priority, task.ID)
+	result, err := tx.Exec(query, task.Title, task.Description, task.DueDate, task.IsCompleted, task.CompletedAt, task.Priority, task.ImageUrl, task.ID)
 	if err != nil {
 		return fmt.Errorf("タスク更新失敗: %w", err)
 	}

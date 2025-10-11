@@ -33,6 +33,7 @@ _Task _$TaskFromJson(Map json) => $checkedCreate('_Task', json, (
       (v) =>
           $enumDecodeNullable(_$TaskPriorityEnumMap, v) ?? TaskPriority.medium,
     ),
+    imageUrl: $checkedConvert('imageUrl', (v) => v as String?),
   );
   return val;
 });
@@ -47,6 +48,7 @@ Map<String, dynamic> _$TaskToJson(_Task instance) => <String, dynamic>{
   'completedAt': instance.completedAt?.toIso8601String(),
   'tags': instance.tags,
   'priority': _$TaskPriorityEnumMap[instance.priority]!,
+  'imageUrl': instance.imageUrl,
 };
 
 const _$TaskPriorityEnumMap = {

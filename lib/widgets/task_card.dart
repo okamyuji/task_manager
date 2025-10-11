@@ -117,7 +117,7 @@ class TaskCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      DateFormatter.formatDateTime(task.dueDate!),
+                      DateFormatter.formatDateTimeFlexible(task.dueDate!),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isOverdue ? Colors.red : Colors.grey[600],
                         fontWeight: isOverdue ? FontWeight.bold : null,

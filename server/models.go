@@ -60,7 +60,8 @@ type Task struct {
 	IsCompleted bool          `json:"isCompleted"`
 	CompletedAt *FlexibleTime `json:"completedAt,omitempty"`
 	Tags        []string      `json:"tags"`
-	Priority    string        `json:"priority"` // low, medium, high, urgent
+	Priority    string        `json:"priority"`           // low, medium, high, urgent
+	ImageUrl    *string       `json:"imageUrl,omitempty"` // 添付画像URL
 }
 
 // TaskStore タスクのインメモリストア

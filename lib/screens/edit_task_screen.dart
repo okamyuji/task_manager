@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants/app_constants.dart';
+import '../core/utils/date_formatter.dart';
 import '../models/task.dart';
+import '../providers/image_upload_provider.dart';
 import '../providers/task_provider.dart';
+import '../widgets/cached_image.dart';
 
 /// タスク編集画面
 class EditTaskScreen extends ConsumerStatefulWidget {
@@ -34,6 +38,15 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
     _selectedDate = widget.task.dueDate;
     _tags.addAll(widget.task.tags);
     _tagController = TextEditingController();
+
+    // 既存画像がある場合、アップロード状態に設定
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.task.imageUrl != null) {
+        ref
+            .read(imageUploadProvider.notifier)
+            .setUploadedUrl(widget.task.imageUrl!);
+      }
+    });
   }
 
   @override
@@ -45,16 +58,62 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   }
 
   Future<void> _selectDate() async {
-    final picked = await showDatePicker(
+    final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
+
+    if (date != null && mounted) {
+      // 時刻も設定するか確認
+      final includeTime = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('時刻も設定しますか？'),
+          content: const Text('日付のみの場合は「日付のみ」を、\n時刻も指定する場合は「時刻も設定」を選択してください。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('日付のみ'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('時刻も設定'),
+            ),
+          ],
+        ),
+      );
+
+      if (includeTime == null) return; // キャンセルされた場合
+
+      if (includeTime) {
+        // 時刻を選択
+        if (!mounted) return;
+        final time = await showTimePicker(
+          context: context,
+          initialTime: _selectedDate != null
+              ? TimeOfDay.fromDateTime(_selectedDate!)
+              : TimeOfDay.now(),
+        );
+
+        if (time != null && mounted) {
+          setState(() {
+            _selectedDate = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              time.hour,
+              time.minute,
+            );
+          });
+        }
+      } else {
+        // 日付のみ（時刻は0:00）
+        setState(() {
+          _selectedDate = DateTime(date.year, date.month, date.day, 0, 0);
+        });
+      }
     }
   }
 
@@ -75,15 +134,21 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
 
   Future<void> _saveTask() async {
     if (_formKey.currentState!.validate()) {
+      final uploadState = ref.read(imageUploadProvider);
+
       final updatedTask = widget.task.copyWith(
         title: _titleController.text,
         description: _descriptionController.text,
         dueDate: _selectedDate,
         priority: _selectedPriority,
         tags: _tags,
+        imageUrl: uploadState.uploadedUrl, // アップロードした画像URL
       );
 
       ref.read(taskListProvider.notifier).updateTask(updatedTask);
+
+      // 画像アップロード状態をリセット
+      ref.read(imageUploadProvider.notifier).reset();
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -93,6 +158,8 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final uploadState = ref.watch(imageUploadProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('タスク編集'),
@@ -139,7 +206,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
               title: Text(
                 _selectedDate == null
                     ? '期限を設定'
-                    : '期限: ${_selectedDate!.year}/${_selectedDate!.month}/${_selectedDate!.day}',
+                    : '期限: ${DateFormatter.formatDateTimeFlexible(_selectedDate!)}',
               ),
               trailing: _selectedDate != null
                   ? IconButton(
@@ -174,6 +241,76 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                 }
               },
             ),
+            const SizedBox(height: 24),
+
+            // 画像
+            Text('画像', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (uploadState.uploadedUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedImage(
+                  imageUrl: uploadState.uploadedUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      ref.read(imageUploadProvider.notifier).reset();
+                    },
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text('削除'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  ),
+                ],
+              ),
+            ] else if (uploadState.isUploading) ...[
+              Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(value: uploadState.progress),
+                    const SizedBox(height: 8),
+                    Text('アップロード中... ${(uploadState.progress * 100).toInt()}%'),
+                  ],
+                ),
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final uploadUrl = '${AppConstants.apiBaseUrl}/upload';
+                        ref
+                            .read(imageUploadProvider.notifier)
+                            .pickAndUploadFromCamera(uploadUrl);
+                      },
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('カメラ'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final uploadUrl = '${AppConstants.apiBaseUrl}/upload';
+                        ref
+                            .read(imageUploadProvider.notifier)
+                            .pickAndUploadFromGallery(uploadUrl);
+                      },
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('ギャラリー'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             Text('タグ', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
