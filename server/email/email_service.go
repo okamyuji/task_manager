@@ -57,10 +57,18 @@ func (s *EmailService) SendWelcomeEmail(to, name string) error {
 	return s.sendEmail(to, subject, body)
 }
 
+// sanitizeHeader メールヘッダインジェクション対策として CR/LF を除去
+func sanitizeHeader(v string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(v)
+}
+
 // sendEmail メールを送信（実装）
 func (s *EmailService) sendEmail(to, subject, body string) error {
+	// ヘッダ行に流し込まれる値は CR/LF を除去してインジェクションを防ぐ
+	to = sanitizeHeader(to)
+	subject = sanitizeHeader(subject)
 	// メール形式
-	message := s.buildMessage(s.from, to, subject, body)
+	message := s.buildMessage(sanitizeHeader(s.from), to, subject, body)
 
 	// SMTPサーバーに接続（認証なし: MailHog用）
 	addr := fmt.Sprintf("%s:%s", s.smtpHost, s.smtpPort)
