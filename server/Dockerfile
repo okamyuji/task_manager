@@ -1,5 +1,5 @@
 # ビルドステージ
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 # 必要なツールをインストール
 RUN apk add --no-cache git gcc musl-dev sqlite-dev
