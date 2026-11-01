@@ -25,6 +25,8 @@ func TestValidateJWTSecretRejectsWeakValues(t *testing.T) {
 		"readme example":  "your-super-secret-production-key-here",
 		"padded example":  "  your-256-bit-secret-key-change-this-in-production  ",
 		"too short":       randomHex(t, 15),
+		// README の置き場所の表示。26 文字だが UTF-8 では 32 バイトある
+		"readme placeholder": "<openssl rand -hex 32 の出力>",
 	}
 	for name, secret := range cases {
 		t.Run(name, func(t *testing.T) {

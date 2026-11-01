@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 var (
@@ -28,6 +29,7 @@ var exampleJWTSecrets = map[string]bool{
 	"default-secret-change-in-production":                          true,
 	"your-super-secret-jwt-key-change-this-in-production-256-bits": true,
 	"your-super-secret-production-key-here":                        true,
+	"<openssl rand -hex 32 の出力>":                                   true,
 }
 
 // validateJWTSecret は JWT_SECRET が署名に使える値かを確かめる。エラーに値そのものは含めない
@@ -38,7 +40,8 @@ func validateJWTSecret(secret string) error {
 		return errors.New("JWT_SECRET が設定されていません。openssl rand -hex 32 で作った値を設定してください")
 	case exampleJWTSecrets[secret]:
 		return errors.New("JWT_SECRET が例の値のままです。openssl rand -hex 32 で作った値を設定してください")
-	case len(secret) < minJWTSecretLength:
+	// バイト数ではなく文字数で数える。日本語を含む値がバイト数だけで通らないようにする
+	case utf8.RuneCountInString(secret) < minJWTSecretLength:
 		return fmt.Errorf("JWT_SECRET は %d 文字以上にしてください", minJWTSecretLength)
 	}
 	return nil
