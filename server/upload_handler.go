@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +15,31 @@ import (
 
 // UploadHandler 画像アップロード関連のハンドラー
 type UploadHandler struct{}
+
+var allowedImageExts = map[string]string{
+	"image/png":  ".png",
+	"image/jpeg": ".jpg",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+}
+
+var errNotImage = errors.New("not a PNG, JPEG, GIF or WebP image")
+
+// detectImageExt は拡張子を送られた名前ではなく中身から決め、読む位置を先頭に戻す。
+// .html や .svg を /uploads/ から配信すると、同じオリジンでスクリプトが動くため
+func detectImageExt(file multipart.File) (string, error) {
+	head := make([]byte, 512)
+	n, err := io.ReadFull(file, head)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		return "", err
+	}
+	ext, ok := allowedImageExts[http.DetectContentType(head[:n])]
+	if !ok {
+		return "", errNotImage
+	}
+	_, err = file.Seek(0, io.SeekStart)
+	return ext, err
+}
 
 // HandleUpload 画像アップロード処理
 func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
@@ -50,10 +77,11 @@ func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 		"content_type", header.Header.Get("Content-Type"),
 	)
 
-	// ファイル拡張子を取得
-	ext := filepath.Ext(header.Filename)
-	if ext == "" {
-		ext = ".jpg" // デフォルト
+	ext, err := detectImageExt(file)
+	if err != nil {
+		logger.Warn("画像ファイルを受け付けない", "filename", header.Filename, "error", err)
+		respondWithError(w, http.StatusBadRequest, "Only PNG, JPEG, GIF and WebP images are allowed")
+		return
 	}
 
 	// ユニークなファイル名を生成
