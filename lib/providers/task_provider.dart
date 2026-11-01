@@ -69,7 +69,7 @@ Task? task(Ref ref, String taskId) {
   return tasks.when(
     data: (tasks) => tasks.where((t) => t.id == taskId).firstOrNull,
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
 }
 
@@ -80,7 +80,7 @@ List<Task> completedTasks(Ref ref) {
   return tasks.when(
     data: (tasks) => tasks.where((t) => t.isCompleted).toList(),
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
   );
 }
 
@@ -91,6 +91,6 @@ List<Task> incompleteTasks(Ref ref) {
   return tasks.when(
     data: (tasks) => tasks.where((t) => !t.isCompleted).toList(),
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
   );
 }
