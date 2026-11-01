@@ -11,12 +11,12 @@ part of 'auth_provider.dart';
 /// 認証状態プロバイダー
 
 @ProviderFor(Auth)
-const authProvider = AuthProvider._();
+final authProvider = AuthProvider._();
 
 /// 認証状態プロバイダー
 final class AuthProvider extends $AsyncNotifierProvider<Auth, AuthState> {
   /// 認証状態プロバイダー
-  const AuthProvider._()
+  AuthProvider._()
     : super(
         from: null,
         argument: null,
@@ -43,8 +43,7 @@ abstract class _$Auth extends $AsyncNotifier<AuthState> {
   FutureOr<AuthState> build();
   @$mustCallSuper
   @override
-  void runBuild() {
-    final created = build();
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<AsyncValue<AuthState>, AuthState>;
     final element =
         ref.element
@@ -54,6 +53,6 @@ abstract class _$Auth extends $AsyncNotifier<AuthState> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    return element.handleCreate(ref, build);
   }
 }

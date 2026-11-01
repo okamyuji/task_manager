@@ -11,7 +11,7 @@ part of 'image_cache_service.dart';
 /// 画像キャッシュサービスのプロバイダー
 
 @ProviderFor(imageCacheService)
-const imageCacheServiceProvider = ImageCacheServiceProvider._();
+final imageCacheServiceProvider = ImageCacheServiceProvider._();
 
 /// 画像キャッシュサービスのプロバイダー
 
@@ -24,7 +24,7 @@ final class ImageCacheServiceProvider
         >
     with $Provider<ImageCacheService> {
   /// 画像キャッシュサービスのプロバイダー
-  const ImageCacheServiceProvider._()
+  ImageCacheServiceProvider._()
     : super(
         from: null,
         argument: null,
