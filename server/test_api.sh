@@ -5,6 +5,18 @@
 # 例: ./test_api.sh http://192.168.0.16:8080
 
 BASE_URL="${1:-http://localhost:8080}"
+MAILHOG_URL="${MAILHOG_URL:-http://localhost:8025}"
+
+# MailHog に届いた認証コードを取り出す。登録したユーザーは、メール認証が済むまでログインできない
+fetch_verification_code() {
+    local code=""
+    for _ in 1 2 3 4 5; do
+        code=$(curl -s "$MAILHOG_URL/api/v2/search?kind=to&query=$1" | sed -n 's/.*認証コード: \([0-9]\{6\}\).*/\1/p' | head -1)
+        [ -n "$code" ] && break
+        sleep 1
+    done
+    echo "$code"
+}
 
 echo "Task Manager API テスト"
 echo "=========================="
@@ -495,14 +507,27 @@ OTHER_USER_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/register" \
     \"name\": \"別ユーザー${TIMESTAMP2}\"
   }")
 
-if echo "$OTHER_USER_RESPONSE" | grep -q "accessToken"; then
+OTHER_USER_ID=$(echo $OTHER_USER_RESPONSE | grep -o '"userId":"[^"]*' | cut -d'"' -f4)
+OTHER_CODE=""
+if [ -n "$OTHER_USER_ID" ]; then
+    OTHER_CODE=$(fetch_verification_code "$NEW_USER_EMAIL")
+fi
+if [ -n "$OTHER_CODE" ]; then
+    curl -s -o /dev/null -X POST "$BASE_URL/auth/verify" \
+      -H "Content-Type: application/json" \
+      -d "{\"email\": \"$NEW_USER_EMAIL\", \"code\": \"$OTHER_CODE\"}"
+    OTHER_LOGIN=$(curl -s -X POST "$BASE_URL/auth/login" \
+      -H "Content-Type: application/json" \
+      -d "{\"email\": \"$NEW_USER_EMAIL\", \"password\": \"otherpass123\"}")
+    OTHER_ACCESS_TOKEN=$(echo $OTHER_LOGIN | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+fi
+
+if [ -n "$OTHER_ACCESS_TOKEN" ]; then
     echo "別ユーザー作成成功"
-    OTHER_ACCESS_TOKEN=$(echo $OTHER_USER_RESPONSE | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
-    OTHER_USER_ID=$(echo $OTHER_USER_RESPONSE | grep -o '"userId":"[^"]*' | cut -d'"' -f4)
     echo "   Other User ID: $OTHER_USER_ID"
     echo "   Other Access Token: ${OTHER_ACCESS_TOKEN:0:50}..."
 else
-    echo "別ユーザー作成失敗"
+    echo "別ユーザー作成失敗（登録、MailHog の認証コード、認証、ログインのどこかで止まった）"
     echo "$OTHER_USER_RESPONSE"
 fi
 echo ""
@@ -519,7 +544,7 @@ OTHER_TASK_RESPONSE=$(curl -s -X POST "$BASE_URL/tasks" \
     \"tags\": [\"認可テスト\"]
   }")
 
-if echo "$OTHER_TASK_RESPONSE" | grep -q "id"; then
+if echo "$OTHER_TASK_RESPONSE" | grep -q '"id":"'; then
     echo "別ユーザーのタスク作成成功"
     OTHER_TASK_ID=$(echo $OTHER_TASK_RESPONSE | grep -o '"id":"[^"]*' | cut -d'"' -f4)
     echo "   Other Task ID: $OTHER_TASK_ID"

@@ -60,12 +60,12 @@ func (h *TaskHandlerNew) HandleTaskByID(w http.ResponseWriter, r *http.Request) 
 	// complete/incompleteのチェック
 	if strings.HasSuffix(path, "/complete") {
 		taskID := strings.TrimSuffix(path, "/complete")
-		h.completeTask(w, r, userID, taskID)
+		h.setCompletion(w, r, userID, taskID, true)
 		return
 	}
 	if strings.HasSuffix(path, "/incomplete") {
 		taskID := strings.TrimSuffix(path, "/incomplete")
-		h.incompleteTask(w, r, userID, taskID)
+		h.setCompletion(w, r, userID, taskID, false)
 		return
 	}
 
@@ -102,76 +102,79 @@ func (h *TaskHandlerNew) getTasks(w http.ResponseWriter, userID string) {
 	respondWithJSON(w, http.StatusOK, apiTasks)
 }
 
-// getTask タスク詳細を取得（自分のタスクのみ）
-func (h *TaskHandlerNew) getTask(w http.ResponseWriter, userID, taskID string) {
+// ownedTask は userID が持つタスクを返す。取れないときは応答を書き、nil を返す
+func (h *TaskHandlerNew) ownedTask(w http.ResponseWriter, userID, taskID, action string) *repository.Task {
 	task, err := h.taskRepo.GetByID(taskID)
 	if err != nil {
 		h.logger.Error("タスク取得エラー", "error", err, "task_id", taskID, "user_id", userID)
 		respondWithError(w, http.StatusInternalServerError, "Internal server error")
-		return
+		return nil
 	}
 	if task == nil {
-		h.logger.Warn("タスクが見つかりません", "task_id", taskID, "user_id", userID)
+		h.logger.Warn(action+": タスクが見つかりません", "task_id", taskID, "user_id", userID)
 		respondWithError(w, http.StatusNotFound, "Task not found")
-		return
+		return nil
 	}
-
-	// 所有者チェック
 	if task.UserID != userID {
-		h.logger.Warn("タスクへのアクセス権限がありません",
+		h.logger.Warn(action+": アクセス権限がありません",
 			"task_id", taskID,
 			"task_owner", task.UserID,
 			"requesting_user", userID,
 		)
 		respondWithError(w, http.StatusForbidden, "Access denied")
+		return nil
+	}
+	return task
+}
+
+// decodeTask はリクエストのタスクを読み、入力を検証する。だめなときは 400 を書き、nil を返す
+func (h *TaskHandlerNew) decodeTask(w http.ResponseWriter, r *http.Request, userID string) *Task {
+	var apiTask Task
+	if err := json.NewDecoder(r.Body).Decode(&apiTask); err != nil {
+		h.logger.Warn("リクエストボディのパースエラー", "error", err, "user_id", userID)
+		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return nil
+	}
+	for _, err := range []error{
+		validation.ValidateTaskTitle(apiTask.Title),
+		validation.ValidateTaskDescription(apiTask.Description),
+		validation.ValidateTaskPriority(apiTask.Priority),
+	} {
+		if err != nil {
+			h.logger.Warn("バリデーションエラー", "error", err)
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return nil
+		}
+	}
+	return &apiTask
+}
+
+// getTask タスク詳細を取得（自分のタスクのみ）
+func (h *TaskHandlerNew) getTask(w http.ResponseWriter, userID, taskID string) {
+	task := h.ownedTask(w, userID, taskID, "タスク取得")
+	if task == nil {
 		return
 	}
-
 	h.logger.Debug("タスク詳細取得", "task_id", taskID, "user_id", userID, "title", task.Title)
 	respondWithJSON(w, http.StatusOK, repositoryTaskToAPITask(task))
 }
 
 // createTask タスクを作成
 func (h *TaskHandlerNew) createTask(w http.ResponseWriter, r *http.Request, userID string) {
-	var apiTask Task
-	if err := json.NewDecoder(r.Body).Decode(&apiTask); err != nil {
-		h.logger.Warn("タスク作成: リクエストボディのパースエラー", "error", err, "user_id", userID)
-		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+	apiTask := h.decodeTask(w, r, userID)
+	if apiTask == nil {
 		return
 	}
 
-	// バリデーション
-	if err := validation.ValidateTaskTitle(apiTask.Title); err != nil {
-		h.logger.Warn("バリデーションエラー", "error", err)
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := validation.ValidateTaskDescription(apiTask.Description); err != nil {
-		h.logger.Warn("バリデーションエラー", "error", err)
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := validation.ValidateTaskPriority(apiTask.Priority); err != nil {
-		h.logger.Warn("バリデーションエラー", "error", err)
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// リポジトリモデルに変換
-	task := apiTaskToRepositoryTask(&apiTask)
+	task := apiTaskToRepositoryTask(apiTask)
 	task.UserID = userID
-
-	// 優先度のデフォルト値
 	if task.Priority == "" {
 		task.Priority = "medium"
 	}
-
-	// タグが未設定の場合は空配列
 	if task.Tags == nil {
 		task.Tags = []string{}
 	}
 
-	// タスク作成
 	if err := h.taskRepo.Create(task); err != nil {
 		h.logger.Error("タスク作成エラー", "error", err, "user_id", userID)
 		respondWithError(w, http.StatusInternalServerError, "Failed to create task")
@@ -184,72 +187,28 @@ func (h *TaskHandlerNew) createTask(w http.ResponseWriter, r *http.Request, user
 		"title", task.Title,
 		"priority", task.Priority,
 	)
-
 	respondWithJSON(w, http.StatusCreated, repositoryTaskToAPITask(task))
 }
 
 // updateTask タスクを更新（自分のタスクのみ）
 func (h *TaskHandlerNew) updateTask(w http.ResponseWriter, r *http.Request, userID, taskID string) {
-	// 既存タスクの確認
-	existingTask, err := h.taskRepo.GetByID(taskID)
-	if err != nil {
-		h.logger.Error("タスク取得エラー", "error", err, "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusInternalServerError, "Internal server error")
-		return
-	}
+	existingTask := h.ownedTask(w, userID, taskID, "タスク更新")
 	if existingTask == nil {
-		h.logger.Warn("タスク更新: タスクが見つかりません", "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusNotFound, "Task not found")
+		return
+	}
+	apiTask := h.decodeTask(w, r, userID)
+	if apiTask == nil {
 		return
 	}
 
-	// 所有者チェック
-	if existingTask.UserID != userID {
-		h.logger.Warn("タスク更新: アクセス権限がありません",
-			"task_id", taskID,
-			"task_owner", existingTask.UserID,
-			"requesting_user", userID,
-		)
-		respondWithError(w, http.StatusForbidden, "Access denied")
-		return
-	}
-
-	var apiTask Task
-	if err := json.NewDecoder(r.Body).Decode(&apiTask); err != nil {
-		h.logger.Warn("タスク更新: リクエストボディのパースエラー", "error", err, "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// バリデーション
-	if err := validation.ValidateTaskTitle(apiTask.Title); err != nil {
-		h.logger.Warn("バリデーションエラー", "error", err)
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := validation.ValidateTaskDescription(apiTask.Description); err != nil {
-		h.logger.Warn("バリデーションエラー", "error", err)
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := validation.ValidateTaskPriority(apiTask.Priority); err != nil {
-		h.logger.Warn("バリデーションエラー", "error", err)
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// リポジトリモデルに変換
-	task := apiTaskToRepositoryTask(&apiTask)
+	task := apiTaskToRepositoryTask(apiTask)
 	task.ID = taskID
 	task.UserID = userID
 	task.CreatedAt = existingTask.CreatedAt // 作成日時は保持
-
-	// タグが未設定の場合は空配列
 	if task.Tags == nil {
 		task.Tags = []string{}
 	}
 
-	// タスク更新
 	if err := h.taskRepo.Update(task); err != nil {
 		h.logger.Error("タスク更新エラー", "error", err, "task_id", taskID, "user_id", userID)
 		respondWithError(w, http.StatusInternalServerError, "Failed to update task")
@@ -262,31 +221,11 @@ func (h *TaskHandlerNew) updateTask(w http.ResponseWriter, r *http.Request, user
 
 // deleteTask タスクを削除（自分のタスクのみ）
 func (h *TaskHandlerNew) deleteTask(w http.ResponseWriter, userID, taskID string) {
-	// 既存タスクの確認
-	task, err := h.taskRepo.GetByID(taskID)
-	if err != nil {
-		h.logger.Error("タスク取得エラー", "error", err, "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusInternalServerError, "Internal server error")
-		return
-	}
+	task := h.ownedTask(w, userID, taskID, "タスク削除")
 	if task == nil {
-		h.logger.Warn("タスク削除: タスクが見つかりません", "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusNotFound, "Task not found")
 		return
 	}
 
-	// 所有者チェック
-	if task.UserID != userID {
-		h.logger.Warn("タスク削除: アクセス権限がありません",
-			"task_id", taskID,
-			"task_owner", task.UserID,
-			"requesting_user", userID,
-		)
-		respondWithError(w, http.StatusForbidden, "Access denied")
-		return
-	}
-
-	// タスク削除
 	if err := h.taskRepo.Delete(taskID); err != nil {
 		h.logger.Error("タスク削除エラー", "error", err, "task_id", taskID, "user_id", userID)
 		respondWithError(w, http.StatusInternalServerError, "Failed to delete task")
@@ -297,95 +236,34 @@ func (h *TaskHandlerNew) deleteTask(w http.ResponseWriter, userID, taskID string
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// completeTask タスクを完了状態にする（自分のタスクのみ）
-func (h *TaskHandlerNew) completeTask(w http.ResponseWriter, r *http.Request, userID, taskID string) {
+// setCompletion タスクを完了か未完了にする（自分のタスクのみ）
+func (h *TaskHandlerNew) setCompletion(w http.ResponseWriter, r *http.Request, userID, taskID string, done bool) {
 	if r.Method != http.MethodPatch {
 		h.logger.Warn("不正なHTTPメソッド", "method", r.Method, "path", r.URL.Path)
 		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
+	action, change, failMsg := "タスク未完了化", h.taskRepo.Incomplete, "Failed to incomplete task"
+	if done {
+		action, change, failMsg = "タスク完了", h.taskRepo.Complete, "Failed to complete task"
+	}
+	if h.ownedTask(w, userID, taskID, action) == nil {
+		return
+	}
 
-	// 既存タスクの確認
-	task, err := h.taskRepo.GetByID(taskID)
-	if err != nil {
-		h.logger.Error("タスク取得エラー", "error", err, "task_id", taskID, "user_id", userID)
+	if err := change(taskID); err != nil {
+		h.logger.Error(action+"エラー", "error", err, "task_id", taskID, "user_id", userID)
+		respondWithError(w, http.StatusInternalServerError, failMsg)
+		return
+	}
+	updatedTask, err := h.taskRepo.GetByID(taskID)
+	if err != nil || updatedTask == nil {
+		h.logger.Error(action+"後のタスク取得エラー", "error", err, "task_id", taskID, "user_id", userID)
 		respondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
-	if task == nil {
-		h.logger.Warn("タスク完了: タスクが見つかりません", "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusNotFound, "Task not found")
-		return
-	}
 
-	// 所有者チェック
-	if task.UserID != userID {
-		h.logger.Warn("タスク完了: アクセス権限がありません",
-			"task_id", taskID,
-			"task_owner", task.UserID,
-			"requesting_user", userID,
-		)
-		respondWithError(w, http.StatusForbidden, "Access denied")
-		return
-	}
-
-	// タスク完了
-	if err := h.taskRepo.Complete(taskID); err != nil {
-		h.logger.Error("タスク完了エラー", "error", err, "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusInternalServerError, "Failed to complete task")
-		return
-	}
-
-	// 更新後のタスクを取得
-	updatedTask, _ := h.taskRepo.GetByID(taskID)
-
-	h.logger.Info("タスク完了", "task_id", taskID, "user_id", userID, "title", task.Title)
-	respondWithJSON(w, http.StatusOK, repositoryTaskToAPITask(updatedTask))
-}
-
-// incompleteTask タスクを未完了状態にする（自分のタスクのみ）
-func (h *TaskHandlerNew) incompleteTask(w http.ResponseWriter, r *http.Request, userID, taskID string) {
-	if r.Method != http.MethodPatch {
-		h.logger.Warn("不正なHTTPメソッド", "method", r.Method, "path", r.URL.Path)
-		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	// 既存タスクの確認
-	task, err := h.taskRepo.GetByID(taskID)
-	if err != nil {
-		h.logger.Error("タスク取得エラー", "error", err, "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusInternalServerError, "Internal server error")
-		return
-	}
-	if task == nil {
-		h.logger.Warn("タスク未完了化: タスクが見つかりません", "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusNotFound, "Task not found")
-		return
-	}
-
-	// 所有者チェック
-	if task.UserID != userID {
-		h.logger.Warn("タスク未完了化: アクセス権限がありません",
-			"task_id", taskID,
-			"task_owner", task.UserID,
-			"requesting_user", userID,
-		)
-		respondWithError(w, http.StatusForbidden, "Access denied")
-		return
-	}
-
-	// タスク未完了化
-	if err := h.taskRepo.Incomplete(taskID); err != nil {
-		h.logger.Error("タスク未完了化エラー", "error", err, "task_id", taskID, "user_id", userID)
-		respondWithError(w, http.StatusInternalServerError, "Failed to incomplete task")
-		return
-	}
-
-	// 更新後のタスクを取得
-	updatedTask, _ := h.taskRepo.GetByID(taskID)
-
-	h.logger.Info("タスク未完了化", "task_id", taskID, "user_id", userID, "title", task.Title)
+	h.logger.Info(action, "task_id", taskID, "user_id", userID, "title", updatedTask.Title)
 	respondWithJSON(w, http.StatusOK, repositoryTaskToAPITask(updatedTask))
 }
 
@@ -400,6 +278,7 @@ func repositoryTaskToAPITask(task *repository.Task) *Task {
 		IsCompleted: task.IsCompleted,
 		Tags:        task.Tags,
 		Priority:    task.Priority,
+		ImageUrl:    task.ImageUrl,
 	}
 
 	if task.DueDate != nil {
@@ -423,6 +302,7 @@ func apiTaskToRepositoryTask(apiTask *Task) *repository.Task {
 		IsCompleted: apiTask.IsCompleted,
 		Tags:        apiTask.Tags,
 		Priority:    apiTask.Priority,
+		ImageUrl:    apiTask.ImageUrl,
 	}
 
 	if apiTask.DueDate != nil {
