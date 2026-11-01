@@ -25,7 +25,7 @@ class App extends ConsumerWidget {
             : const LoginScreen(),
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (_, __) => const LoginScreen(),
+        error: (_, _) => const LoginScreen(),
       ),
       debugShowCheckedModeBanner: false,
     );
