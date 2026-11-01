@@ -11,7 +11,7 @@ part of 'auth_service.dart';
 /// 認証サービスのプロバイダー
 
 @ProviderFor(authService)
-const authServiceProvider = AuthServiceProvider._();
+final authServiceProvider = AuthServiceProvider._();
 
 /// 認証サービスのプロバイダー
 
@@ -19,7 +19,7 @@ final class AuthServiceProvider
     extends $FunctionalProvider<AuthService, AuthService, AuthService>
     with $Provider<AuthService> {
   /// 認証サービスのプロバイダー
-  const AuthServiceProvider._()
+  AuthServiceProvider._()
     : super(
         from: null,
         argument: null,

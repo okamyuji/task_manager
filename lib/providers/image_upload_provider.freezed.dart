@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'image_upload_provider.dart';
@@ -9,6 +9,7 @@ part of 'image_upload_provider.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
@@ -25,16 +26,21 @@ $ImageUploadStateCopyWith<ImageUploadState> get copyWith => _$ImageUploadStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ImageUploadState&&(identical(other.isUploading, isUploading) || other.isUploading == isUploading)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.uploadedUrl, uploadedUrl) || other.uploadedUrl == uploadedUrl)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  final _this = this as ImageUploadState;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ImageUploadState&&(identical(other.isUploading, _this.isUploading) || other.isUploading == _this.isUploading)&&(identical(other.progress, _this.progress) || other.progress == _this.progress)&&(identical(other.uploadedUrl, _this.uploadedUrl) || other.uploadedUrl == _this.uploadedUrl)&&(identical(other.errorMessage, _this.errorMessage) || other.errorMessage == _this.errorMessage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,isUploading,progress,uploadedUrl,errorMessage);
+int get hashCode {
+  final _this = this as ImageUploadState;
+  return Object.hash(runtimeType,_this.isUploading,_this.progress,_this.uploadedUrl,_this.errorMessage);
+}
 
 @override
 String toString() {
-  return 'ImageUploadState(isUploading: $isUploading, progress: $progress, uploadedUrl: $uploadedUrl, errorMessage: $errorMessage)';
+  final _this = this as ImageUploadState;
+  return 'ImageUploadState(isUploading: ${_this.isUploading}, progress: ${_this.progress}, uploadedUrl: ${_this.uploadedUrl}, errorMessage: ${_this.errorMessage})';
 }
 
 
@@ -63,7 +69,7 @@ class _$ImageUploadStateCopyWithImpl<$Res>
 /// Create a copy of ImageUploadState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? isUploading = null,Object? progress = null,Object? uploadedUrl = freezed,Object? errorMessage = freezed,}) {
-  return _then(_self.copyWith(
+  return _then(ImageUploadState(
 isUploading: null == isUploading ? _self.isUploading : isUploading // ignore: cast_nullable_to_non_nullable
 as bool,progress: null == progress ? _self.progress : progress // ignore: cast_nullable_to_non_nullable
 as double,uploadedUrl: freezed == uploadedUrl ? _self.uploadedUrl : uploadedUrl // ignore: cast_nullable_to_non_nullable
@@ -221,16 +227,18 @@ _$ImageUploadStateCopyWith<_ImageUploadState> get copyWith => __$ImageUploadStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ImageUploadState&&(identical(other.isUploading, isUploading) || other.isUploading == isUploading)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.uploadedUrl, uploadedUrl) || other.uploadedUrl == uploadedUrl)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ImageUploadState&&(identical(other.isUploading, isUploading) || other.isUploading == isUploading)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.uploadedUrl, uploadedUrl) || other.uploadedUrl == uploadedUrl)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,isUploading,progress,uploadedUrl,errorMessage);
+int get hashCode {
+    return Object.hash(runtimeType,isUploading,progress,uploadedUrl,errorMessage);
+}
 
 @override
 String toString() {
-  return 'ImageUploadState(isUploading: $isUploading, progress: $progress, uploadedUrl: $uploadedUrl, errorMessage: $errorMessage)';
+    return 'ImageUploadState(isUploading: $isUploading, progress: $progress, uploadedUrl: $uploadedUrl, errorMessage: $errorMessage)';
 }
 
 

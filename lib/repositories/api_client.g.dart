@@ -2,11 +2,14 @@
 
 part of 'api_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
 
-// ignore_for_file: unnecessary_brace_in_string_interps,no_leading_underscores_for_local_identifiers,unused_element,unnecessary_string_interpolations,unused_element_parameter
+// ignore_for_file: type=lint
+// ignore_for_file: unnecessary_brace_in_string_interps,no_leading_underscores_for_local_identifiers,unused_element,unnecessary_string_interpolations,unused_element_parameter,avoid_unused_constructor_parameters,unreachable_from_main,avoid_redundant_argument_values
 
 class _ApiClient implements ApiClient {
   _ApiClient(this._dio, {this.baseUrl, this.errorLogger});
@@ -40,7 +43,7 @@ class _ApiClient implements ApiClient {
           .map((dynamic i) => Task.fromJson(i as Map<String, dynamic>))
           .toList();
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -67,7 +70,7 @@ class _ApiClient implements ApiClient {
     try {
       _value = Task.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -78,7 +81,8 @@ class _ApiClient implements ApiClient {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
-    final _data = task;
+    final _data = <String, dynamic>{};
+    _data.addAll(task.toJson());
     final _options = _setStreamType<Task>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
@@ -94,7 +98,7 @@ class _ApiClient implements ApiClient {
     try {
       _value = Task.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -105,7 +109,8 @@ class _ApiClient implements ApiClient {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
-    final _data = task;
+    final _data = <String, dynamic>{};
+    _data.addAll(task.toJson());
     final _options = _setStreamType<Task>(
       Options(method: 'PUT', headers: _headers, extra: _extra)
           .compose(
@@ -121,7 +126,7 @@ class _ApiClient implements ApiClient {
     try {
       _value = Task.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -167,7 +172,7 @@ class _ApiClient implements ApiClient {
     try {
       _value = Task.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -194,7 +199,7 @@ class _ApiClient implements ApiClient {
     try {
       _value = Task.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -276,6 +281,8 @@ class _ApiClient implements ApiClient {
   }
 }
 
+// dart format on
+
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
@@ -285,14 +292,14 @@ class _ApiClient implements ApiClient {
 /// Dioインスタンスのプロバイダー
 
 @ProviderFor(dio)
-const dioProvider = DioProvider._();
+final dioProvider = DioProvider._();
 
 /// Dioインスタンスのプロバイダー
 
 final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
     with $Provider<Dio> {
   /// Dioインスタンスのプロバイダー
-  const DioProvider._()
+  DioProvider._()
     : super(
         from: null,
         argument: null,
@@ -330,7 +337,7 @@ String _$dioHash() => r'c8acc0fdc2f697cfcf1a448733944a343721d321';
 /// APIクライアントのプロバイダー
 
 @ProviderFor(apiClient)
-const apiClientProvider = ApiClientProvider._();
+final apiClientProvider = ApiClientProvider._();
 
 /// APIクライアントのプロバイダー
 
@@ -338,7 +345,7 @@ final class ApiClientProvider
     extends $FunctionalProvider<ApiClient, ApiClient, ApiClient>
     with $Provider<ApiClient> {
   /// APIクライアントのプロバイダー
-  const ApiClientProvider._()
+  ApiClientProvider._()
     : super(
         from: null,
         argument: null,

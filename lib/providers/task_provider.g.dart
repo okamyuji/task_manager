@@ -11,13 +11,13 @@ part of 'task_provider.dart';
 /// タスク一覧の状態管理プロバイダー（APIベース）
 
 @ProviderFor(TaskList)
-const taskListProvider = TaskListProvider._();
+final taskListProvider = TaskListProvider._();
 
 /// タスク一覧の状態管理プロバイダー（APIベース）
 final class TaskListProvider
     extends $AsyncNotifierProvider<TaskList, List<Task>> {
   /// タスク一覧の状態管理プロバイダー（APIベース）
-  const TaskListProvider._()
+  TaskListProvider._()
     : super(
         from: null,
         argument: null,
@@ -44,8 +44,7 @@ abstract class _$TaskList extends $AsyncNotifier<List<Task>> {
   FutureOr<List<Task>> build();
   @$mustCallSuper
   @override
-  void runBuild() {
-    final created = build();
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<AsyncValue<List<Task>>, List<Task>>;
     final element =
         ref.element
@@ -55,21 +54,21 @@ abstract class _$TaskList extends $AsyncNotifier<List<Task>> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    return element.handleCreate(ref, build);
   }
 }
 
 /// 特定のタスクを取得するプロバイダー
 
 @ProviderFor(task)
-const taskProvider = TaskFamily._();
+final taskProvider = TaskFamily._();
 
 /// 特定のタスクを取得するプロバイダー
 
 final class TaskProvider extends $FunctionalProvider<Task?, Task?, Task?>
     with $Provider<Task?> {
   /// 特定のタスクを取得するプロバイダー
-  const TaskProvider._({
+  TaskProvider._({
     required TaskFamily super.from,
     required String super.argument,
   }) : super(
@@ -126,7 +125,7 @@ String _$taskHash() => r'd109f5ab40717b4817cb820b6beda5840accd46e';
 
 final class TaskFamily extends $Family
     with $FunctionalFamilyOverride<Task?, String> {
-  const TaskFamily._()
+  TaskFamily._()
     : super(
         retry: null,
         name: r'taskProvider',
@@ -147,7 +146,7 @@ final class TaskFamily extends $Family
 /// 完了済みタスクのフィルタリング
 
 @ProviderFor(completedTasks)
-const completedTasksProvider = CompletedTasksProvider._();
+final completedTasksProvider = CompletedTasksProvider._();
 
 /// 完了済みタスクのフィルタリング
 
@@ -155,7 +154,7 @@ final class CompletedTasksProvider
     extends $FunctionalProvider<List<Task>, List<Task>, List<Task>>
     with $Provider<List<Task>> {
   /// 完了済みタスクのフィルタリング
-  const CompletedTasksProvider._()
+  CompletedTasksProvider._()
     : super(
         from: null,
         argument: null,
@@ -193,7 +192,7 @@ String _$completedTasksHash() => r'9edaf210190c8eb2d6a089db88f2a941c69b53dd';
 /// 未完了タスクのフィルタリング
 
 @ProviderFor(incompleteTasks)
-const incompleteTasksProvider = IncompleteTasksProvider._();
+final incompleteTasksProvider = IncompleteTasksProvider._();
 
 /// 未完了タスクのフィルタリング
 
@@ -201,7 +200,7 @@ final class IncompleteTasksProvider
     extends $FunctionalProvider<List<Task>, List<Task>, List<Task>>
     with $Provider<List<Task>> {
   /// 未完了タスクのフィルタリング
-  const IncompleteTasksProvider._()
+  IncompleteTasksProvider._()
     : super(
         from: null,
         argument: null,

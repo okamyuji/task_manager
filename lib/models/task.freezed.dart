@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'task.dart';
@@ -9,6 +9,7 @@ part of 'task.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 
@@ -28,16 +29,21 @@ $TaskCopyWith<Task> get copyWith => _$TaskCopyWithImpl<Task>(this as Task, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
+  final _this = this as Task;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Task&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.dueDate, _this.dueDate) || other.dueDate == _this.dueDate)&&(identical(other.isCompleted, _this.isCompleted) || other.isCompleted == _this.isCompleted)&&(identical(other.completedAt, _this.completedAt) || other.completedAt == _this.completedAt)&&const DeepCollectionEquality().equals(other.tags, _this.tags)&&(identical(other.priority, _this.priority) || other.priority == _this.priority)&&(identical(other.imageUrl, _this.imageUrl) || other.imageUrl == _this.imageUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,description,createdAt,dueDate,isCompleted,completedAt,const DeepCollectionEquality().hash(tags),priority,imageUrl);
+int get hashCode {
+  final _this = this as Task;
+  return Object.hash(runtimeType,_this.id,_this.title,_this.description,_this.createdAt,_this.dueDate,_this.isCompleted,_this.completedAt,const DeepCollectionEquality().hash(_this.tags),_this.priority,_this.imageUrl);
+}
 
 @override
 String toString() {
-  return 'Task(id: $id, title: $title, description: $description, createdAt: $createdAt, dueDate: $dueDate, isCompleted: $isCompleted, completedAt: $completedAt, tags: $tags, priority: $priority, imageUrl: $imageUrl)';
+  final _this = this as Task;
+  return 'Task(id: ${_this.id}, title: ${_this.title}, description: ${_this.description}, createdAt: ${_this.createdAt}, dueDate: ${_this.dueDate}, isCompleted: ${_this.isCompleted}, completedAt: ${_this.completedAt}, tags: ${_this.tags}, priority: ${_this.priority}, imageUrl: ${_this.imageUrl})';
 }
 
 
@@ -66,7 +72,7 @@ class _$TaskCopyWithImpl<$Res>
 /// Create a copy of Task
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? createdAt = null,Object? dueDate = freezed,Object? isCompleted = null,Object? completedAt = freezed,Object? tags = null,Object? priority = null,Object? imageUrl = freezed,}) {
-  return _then(_self.copyWith(
+  return _then(Task(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
@@ -212,7 +218,7 @@ return $default(_that.id,_that.title,_that.description,_that.createdAt,_that.due
 @JsonSerializable()
 
 class _Task extends Task {
-  const _Task({required this.id, required this.title, required this.description, required this.createdAt, this.dueDate, this.isCompleted = false, this.completedAt, final  List<String> tags = const [], this.priority = TaskPriority.medium, this.imageUrl}): _tags = tags,super._();
+  const _Task({required this.id, required this.title, required this.description, required this.createdAt, this.dueDate, this.isCompleted = false, this.completedAt,  List<String> tags = const [], this.priority = TaskPriority.medium, this.imageUrl}): _tags = tags,super._();
   factory _Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);
 
 @override final  String id;
@@ -245,16 +251,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&const DeepCollectionEquality().equals(other.tags, _tags)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,description,createdAt,dueDate,isCompleted,completedAt,const DeepCollectionEquality().hash(_tags),priority,imageUrl);
+int get hashCode {
+    return Object.hash(runtimeType,id,title,description,createdAt,dueDate,isCompleted,completedAt,const DeepCollectionEquality().hash(_tags),priority,imageUrl);
+}
 
 @override
 String toString() {
-  return 'Task(id: $id, title: $title, description: $description, createdAt: $createdAt, dueDate: $dueDate, isCompleted: $isCompleted, completedAt: $completedAt, tags: $tags, priority: $priority, imageUrl: $imageUrl)';
+    return 'Task(id: $id, title: $title, description: $description, createdAt: $createdAt, dueDate: $dueDate, isCompleted: $isCompleted, completedAt: $completedAt, tags: $tags, priority: $priority, imageUrl: $imageUrl)';
 }
 
 

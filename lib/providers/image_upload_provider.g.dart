@@ -11,13 +11,13 @@ part of 'image_upload_provider.dart';
 /// 画像アップロードプロバイダー
 
 @ProviderFor(ImageUpload)
-const imageUploadProvider = ImageUploadProvider._();
+final imageUploadProvider = ImageUploadProvider._();
 
 /// 画像アップロードプロバイダー
 final class ImageUploadProvider
     extends $NotifierProvider<ImageUpload, ImageUploadState> {
   /// 画像アップロードプロバイダー
-  const ImageUploadProvider._()
+  ImageUploadProvider._()
     : super(
         from: null,
         argument: null,
@@ -52,8 +52,7 @@ abstract class _$ImageUpload extends $Notifier<ImageUploadState> {
   ImageUploadState build();
   @$mustCallSuper
   @override
-  void runBuild() {
-    final created = build();
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<ImageUploadState, ImageUploadState>;
     final element =
         ref.element
@@ -63,6 +62,6 @@ abstract class _$ImageUpload extends $Notifier<ImageUploadState> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    return element.handleCreate(ref, build);
   }
 }
