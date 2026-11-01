@@ -18,18 +18,36 @@ var (
 	jwtSecretOnce sync.Once
 )
 
-// getJWTSecret JWT秘密鍵を環境変数から取得（遅延初期化）
+// minJWTSecretLength は HS256 の鍵として受け入れる最小の文字数
+const minJWTSecretLength = 32
+
+// exampleJWTSecrets はコード、compose.yaml、env.example、README に載っている例の値。
+// 公開されているので、これで署名すると誰でもトークンを作れる
+var exampleJWTSecrets = map[string]bool{
+	"your-256-bit-secret-key-change-this-in-production":            true,
+	"default-secret-change-in-production":                          true,
+	"your-super-secret-jwt-key-change-this-in-production-256-bits": true,
+	"your-super-secret-production-key-here":                        true,
+}
+
+// validateJWTSecret は JWT_SECRET が署名に使える値かを確かめる。エラーに値そのものは含めない
+func validateJWTSecret(secret string) error {
+	secret = strings.TrimSpace(secret)
+	switch {
+	case secret == "":
+		return errors.New("JWT_SECRET が設定されていません。openssl rand -hex 32 で作った値を設定してください")
+	case exampleJWTSecrets[secret]:
+		return errors.New("JWT_SECRET が例の値のままです。openssl rand -hex 32 で作った値を設定してください")
+	case len(secret) < minJWTSecretLength:
+		return fmt.Errorf("JWT_SECRET は %d 文字以上にしてください", minJWTSecretLength)
+	}
+	return nil
+}
+
+// getJWTSecret JWT秘密鍵を環境変数から取得（遅延初期化）。値は起動時に validateJWTSecret で確かめる
 func getJWTSecret() []byte {
 	jwtSecretOnce.Do(func() {
-		secret := os.Getenv("JWT_SECRET")
-		if secret == "" {
-			// デフォルト値（開発環境用）
-			// 注意: logger初期化前に呼ばれる可能性があるため、標準出力に警告
-			fmt.Println("警告: JWT_SECRETが設定されていません。デフォルト値を使用します。本番環境では必ず環境変数を設定してください。")
-			jwtSecret = []byte("your-256-bit-secret-key-change-this-in-production")
-		} else {
-			jwtSecret = []byte(secret)
-		}
+		jwtSecret = []byte(strings.TrimSpace(os.Getenv("JWT_SECRET")))
 	})
 	return jwtSecret
 }

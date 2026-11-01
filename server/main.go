@@ -102,9 +102,9 @@ func main() {
 	}
 
 	// 環境変数の確認
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		logger.Warn("JWT_SECRETが設定されていません。本番環境では必ず設定してください。")
+	if err := validateJWTSecret(os.Getenv("JWT_SECRET")); err != nil {
+		logger.Error("起動を中止しました", "error", err)
+		os.Exit(1)
 	}
 
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
@@ -115,7 +115,7 @@ func main() {
 	logger.Info("サーバーを起動しました",
 		"port", port,
 		"database", dbPath,
-		"jwt_secret_configured", jwtSecret != "",
+		"jwt_secret_configured", true,
 		"cors_configured", allowedOrigins != "",
 		"endpoints", []string{
 			"POST   /auth/login",
