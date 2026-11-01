@@ -13,7 +13,8 @@ services:
     environment:
       - PORT=8080
       - DATABASE_PATH=/app/data/tasks.db
-      - JWT_SECRET=${JWT_SECRET:-default-secret-change-in-production}
+      # 既定値は置かない。.env か環境変数で渡し、未設定ならサーバーが起動時に止まる
+      - JWT_SECRET=${JWT_SECRET}
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - MAIL_FROM=noreply@taskmanager.local

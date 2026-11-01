@@ -81,7 +81,7 @@ task_manager/
 cp env.example .env
 
 # .envファイルを編集（本番環境用の値を設定）
-# JWT_SECRET: 強力なランダム文字列に変更
+# JWT_SECRET: 必須。openssl rand -hex 32 で作った値にする（未設定、例の値、32 文字未満では起動しない）
 # ALLOWED_ORIGINS: 許可するドメインを指定（開発環境では*でOK）
 
 # Dockerコンテナを起動
@@ -1228,7 +1228,7 @@ flutter analyze
 
 ```env
 # 強力なランダム文字列（256ビット推奨）
-JWT_SECRET=your-super-secret-production-key-here
+JWT_SECRET=<openssl rand -hex 32 の出力>
 
 # 許可するドメインを明示的に指定（カンマ区切り）
 ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
