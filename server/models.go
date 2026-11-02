@@ -62,6 +62,25 @@ type Task struct {
 	Tags        []string      `json:"tags"`
 	Priority    string        `json:"priority"`           // low, medium, high, urgent
 	ImageUrl    *string       `json:"imageUrl,omitempty"` // 添付画像URL
+
+	// imageURLSent はリクエストに imageUrl のキーがあったか。null は画像の削除、キーなしは変更しないを表す
+	imageURLSent bool
+}
+
+// UnmarshalJSON imageUrl のキーの有無を記録する（*string だけでは省略と null を区別できない）
+func (t *Task) UnmarshalJSON(b []byte) error {
+	type plain Task
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(b, &keys); err != nil {
+		return err
+	}
+	*t = Task(p)
+	_, t.imageURLSent = keys["imageUrl"]
+	return nil
 }
 
 // TaskStore タスクのインメモリストア

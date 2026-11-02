@@ -205,6 +205,7 @@ func (h *TaskHandlerNew) updateTask(w http.ResponseWriter, r *http.Request, user
 	task.ID = taskID
 	task.UserID = userID
 	task.CreatedAt = existingTask.CreatedAt // 作成日時は保持
+	task.ImageUrl = updatedImageURL(apiTask, existingTask)
 	if task.Tags == nil {
 		task.Tags = []string{}
 	}
@@ -315,4 +316,12 @@ func apiTaskToRepositoryTask(apiTask *Task) *repository.Task {
 	}
 
 	return task
+}
+
+// updatedImageURL 更新後の画像 URL を返す。キーなしは保存済みの URL を残し、null は消し、値はその値にする
+func updatedImageURL(req *Task, existing *repository.Task) *string {
+	if !req.imageURLSent {
+		return existing.ImageUrl
+	}
+	return req.ImageUrl
 }
