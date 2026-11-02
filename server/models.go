@@ -74,12 +74,15 @@ func (t *Task) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &p); err != nil {
 		return err
 	}
-	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(b, &keys); err != nil {
+	// 欄の対応と同じ規則（大文字と小文字を区別しない）でキーの有無を見る。null も RawMessage("null") として残る
+	var probe struct {
+		ImageURL json.RawMessage `json:"imageUrl"`
+	}
+	if err := json.Unmarshal(b, &probe); err != nil {
 		return err
 	}
 	*t = Task(p)
-	_, t.imageURLSent = keys["imageUrl"]
+	t.imageURLSent = probe.ImageURL != nil
 	return nil
 }
 

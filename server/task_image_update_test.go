@@ -18,6 +18,9 @@ func TestUpdatedImageURL(t *testing.T) {
 		{"keeps the stored URL when imageUrl is omitted", `{"title":"a"}`, &stored},
 		{"clears the URL when imageUrl is null", `{"title":"a","imageUrl":null}`, nil},
 		{"replaces the URL when imageUrl has a value", `{"title":"a","imageUrl":"` + next + `"}`, &next},
+		// encoding/json はキーの大文字と小文字を区別せずに欄へ対応させる
+		{"replaces the URL when the key differs only in case", `{"title":"a","ImageUrl":"` + next + `"}`, &next},
+		{"clears the URL when a differently cased key is null", `{"title":"a","IMAGEURL":null}`, nil},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
