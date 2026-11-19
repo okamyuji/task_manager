@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// エラー表示用のバナーウィジェット
 class ErrorBanner extends StatelessWidget {
